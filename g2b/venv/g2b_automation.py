@@ -1,4 +1,6 @@
+import sys
 import time
+import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,6 +12,9 @@ from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 import os
 import chromedriver_autoinstaller
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 chromedriver_autoinstaller.install()
 options = Options()
@@ -51,8 +56,9 @@ def close_popup(css_selector):
             EC.element_to_be_clickable((By.CSS_SELECTOR, css_selector))
         )
         element.click()
+        logging.info(f"팝업 닫음: {css_selector}")
     except TimeoutException:
-        print("팝업이 없습니다.")
+        logging.info(f"팝업 없음: {css_selector}")
 
 def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300, wait_time=1):
     for scroll_count in range(max_scrolls):
@@ -60,7 +66,6 @@ def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300,
             # 첨부파일 요소가 화면에 나타났는지 확인
             element = driver.find_element(By.XPATH, xpath)
             if element.is_displayed():
-                print(f"첨부파일 요소가 화면에 표시되었습니다: {xpath}")
                 return True
         except NoSuchElementException:
             pass
@@ -69,14 +74,14 @@ def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300,
         driver.execute_script(f"window.scrollBy(0, {scroll_step});")
         time.sleep(wait_time)
 
-    print(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {xpath}")
+    logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {xpath}")
     return False
 
 # ZIP 파일을 지정된 폴더로 추출
 def extract_zip(zip_file_path, extract_to_folder):
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         zip_ref.extractall(extract_to_folder)
-    print(f"ZIP 파일 {zip_file_path}이(가) {extract_to_folder}에 추출되었습니다.")
+    logging.info(f"ZIP 파일 {zip_file_path}이(가) {extract_to_folder}에 추출되었습니다.")
 
 # 다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환
 def get_latest_downloaded_file(download_dir):
@@ -112,6 +117,7 @@ def handle_file(file_path):
 
 # 나라장터 페이지로 이동동
 driver.get("https://www.g2b.go.kr")
+logging.info("나라장터 페이지로 이동 완료")
 
 # 나라장터 페이지 로드 완료될 때까지 sleep 주기
 time.sleep(8)
@@ -134,18 +140,21 @@ for popup_selector in popups:
 ordering = "#mf_wfm_gnb_wfm_gnbMenu_wq_uuid_522"
 ordering_click = driver.find_element(By.CSS_SELECTOR, ordering)
 ordering_click.click()
-time.sleep(3)
+logging.info("발주 메뉴 클릭")
+time.sleep(1)
 
 # 발주목록 소메뉴 클릭
 ordering_list = "#mf_wfm_gnb_wfm_gnbMenu_genDepth1_0_genDepth2_0_btn_menuLvl2"
 ordering_list_click = driver.find_element(By.CSS_SELECTOR, ordering_list)
 ordering_list_click.click()
+logging.info("발주목록 소메뉴 클릭")
 time.sleep(5)
 
 # 사전규격공개 옵션 선택
 pre_specification = "#mf_wfm_container_radSrchTy > li.w2radio_item.w2radio_item_1"
 pre_specification_click = driver.find_element(By.CSS_SELECTOR, pre_specification)
 pre_specification_click.click()
+logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
 # 어제 날짜 계산
@@ -160,10 +169,12 @@ time.sleep(1)
 
 # 진행일자 시작일 기존 값 제거
 start_date_click.clear()
+logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
 start_date_click.send_keys(yesterday_str)
+logging.info(f"시작일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -174,27 +185,32 @@ time.sleep(1)
 
 # 진행일자 종료일 기존 값 제거
 end_date_click.clear()
+logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
 end_date_click.send_keys(yesterday_str)
+logging.info(f"종료일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
 detail = "#wq_uuid_1918_btnSearchToggle"
 detail_click = driver.find_element(By.CSS_SELECTOR, detail)
 detail_click.click()
+logging.info("상세 조건 펼치기 완료")
 
 # 업무구분 일반용역 클릭
 work1 = "#mf_wfm_container_chkRqdcBsneSeCd_input_2"
 work1_click = driver.find_element(By.CSS_SELECTOR, work1)
 work1_click.click()
+logging.info("업무구분 일반용역 선택")
 time.sleep(1)
 
 # 업무구분 기술영역 클릭
 work2 = "#mf_wfm_container_chkRqdcBsneSeCd_input_3"
 work2_click = driver.find_element(By.CSS_SELECTOR, work2)
 work2_click.click()
+logging.info("업무구분 기술영역 선택")
 time.sleep(1)
 
 # 사업명 입력 박스 클릭
@@ -210,12 +226,14 @@ for search_word in search_keywords:
     
     # 사업명 입력
     search_box_click.send_keys(search_word)
+    logging.info(f"검색 박스에 {search_word} 입력")
     time.sleep(1)
 
-    # 검색 버튼 클릭 (리스트 표시까지 완료)
+    # 검색 버튼 클릭
     search_button = "#mf_wfm_container_btnS0001"
     search_button_click = driver.find_element(By.CSS_SELECTOR, search_button)
     search_button_click.click()
+    logging.info(f"{search_word} 검색 시작")
     time.sleep(1)
 
     # 리스트에 항목 있는지 확인 (display none을 확인)
@@ -225,7 +243,7 @@ for search_word in search_keywords:
 
     # 검색 결과가 없으면 다음 키워드로 계속
     if not any(row.value_of_css_property('display') != 'none' for row in rows):
-        print(f"'{search_word}' 검색 결과가 없습니다. 다음 키워드로 넘어갑니다.")
+        logging.info(f"'{search_word}' 검색 결과가 없습니다. 다음 키워드로 넘어갑니다.")
         time.sleep(1)
         search_box_click.click()
         time.sleep(1)
@@ -245,15 +263,16 @@ for search_word in search_keywords:
             
             # 링크 클릭
             link.click()
+            logging.info("항목의 상세규격정보 페이지로 이동")
 
-            # 새 페이지 로드 대기 (예: 페이지 헤더 제목이 로드될 때까지)
+            # 새 페이지 로드 대기
             try:
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
                 )
-                print("새 페이지 로드 완료")
+                logging.info("새 페이지 로드 완료")
             except TimeoutException:
-                print("새 페이지 로드 실패")
+                logging.warning("새 페이지 로드 실패")
                 continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
 
             time.sleep(2)
@@ -261,35 +280,36 @@ for search_word in search_keywords:
             # 스크롤 조건: 첨부파일이 화면에 보일 때까지
             target_xpath = "//*[@id='wq_uuid_2207_groupTitle']"
             if scroll_until_element_visible(driver, target_xpath):
-                print("스크롤 완료. 첨부파일을 화면에 표시.")
+                logging.info("첨부파일 영역으로 이동")
             else:
-                print("첨부파일을 찾지 못했습니다.")
+                logging.warning("첨부파일을 찾지 못했습니다.")
 
             # 전체 선택 체크박스 클릭
             checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
             checkbox.click()
-            time.sleep(1)
+            logging.info("모든 첨부파일을 선택")
+            time.sleep(2)
 
             # 파일 다운로드
+            logging.info("파일 다운로드 시작")
             download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
             download_button.click()
+            logging.info("파일 다운로드 완료")
             time.sleep(1)
 
             # 다운로드된 최신 파일 찾기
+            logging.info("다운로드된 파일 찾는 중")
             latest_file = get_latest_downloaded_file(download_dir)
-            time.sleep(1)
+            time.sleep(2)
 
             # 파일 열기
             if latest_file:
-                print(f"최근 다운로드된 파일: {latest_file}")
+                logging.info(f"최근 다운로드된 파일: {latest_file}")
                 handle_file(latest_file)
             else:
-                print("다운로드된 파일이 없습니다.")
+                logging.warning("다운로드된 파일이 없습니다.")
 
 # 모든 검색 키워드를 처리한 후 종료
-print("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
+logging.info("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
 sys.exit()
-
-input()
-
 
