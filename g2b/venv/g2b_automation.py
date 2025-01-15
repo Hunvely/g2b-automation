@@ -7,7 +7,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from datetime import datetime, timedelta
+from selenium.common.exceptions import NoSuchElementException
 import os
+import pyhwp
 
 import chromedriver_autoinstaller
 
@@ -63,19 +65,59 @@ def close_popup(css_selector):
     except TimeoutException:
         print("팝업이 없습니다.")
 
-# 최근 다운로드된 파일을 찾는 함수
+def scroll_until_element_visible(driver, xpath, max_scrolls=20, scroll_step=300, wait_time=1):
+    for scroll_count in range(max_scrolls):
+        try:
+            # 첨부파일 요소가 화면에 나타났는지 확인
+            element = driver.find_element(By.XPATH, xpath)
+            if element.is_displayed():
+                print(f"첨부파일 요소가 화면에 표시되었습니다: {xpath}")
+                return True
+        except NoSuchElementException:
+            pass
+
+        # 요소가 보이지 않으면 스크롤
+        driver.execute_script(f"window.scrollBy(0, {scroll_step});")
+        time.sleep(wait_time)
+
+    print(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {xpath}")
+    return False
+
+# ZIP 파일을 지정된 폴더로 추출
+def extract_zip(zip_file_path, extract_to_folder):
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to_folder)
+    print(f"ZIP 파일 {zip_file_path}이(가) {extract_to_folder}에 추출되었습니다.")
+
+# 다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환
 def get_latest_downloaded_file(download_dir):
-    """
-    다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환합니다.
-    """
     files = os.listdir(download_dir)
     files_with_path = [os.path.join(download_dir, file) for file in files]
     latest_file = max(files_with_path, key=os.path.getmtime)
     return latest_file
 
-# 파일 열기 함수 (Windows에서 사용)
+# Windows에서 파일을 여는 함수
 def open_file(file_path):
     os.startfile(file_path)
+
+# 다운로드된 파일의 확장자에 따라 처리
+def handle_file(file_path):
+    file_extension = file_path.lower().split('.')[-1]
+
+    if file_extension == 'zip':
+        # ZIP 파일 처리
+        extract_folder = os.path.join(download_dir, "extracted_files")
+        if not os.path.exists(extract_folder):
+            os.makedirs(extract_folder)
+        extract_zip(file_path, extract_folder)
+
+    elif file_extension == 'hwpx':
+        # HWPX 파일 처리
+        print("HWPX 파일 처리 필요: ", file_path)
+
+    else:
+        # 기타 파일 열기
+        open_file(file_path)
 
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
@@ -198,15 +240,14 @@ if rows:  # tr 요소가 하나 이상 있을 경우
             print("새 페이지 로드 실패")
             continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
 
-        time.sleep(2)  # 잠시 대기 (기타 동적 콘텐츠 처리)
+        time.sleep(2)
 
-        # 최대 스크롤 횟수 설정 (3번만 스크롤 내리기)
-        max_scrolls = 3
-        for _ in range(max_scrolls):
-            driver.execute_script("window.scrollBy(0, 300);")  # 300px씩 스크롤
-            time.sleep(1)
-
-        print("3번의 스크롤을 완료했습니다.")
+        # 스크롤 조건: 첨부파일이 화면에 보일 때까지
+        target_xpath = "//*[@id='wq_uuid_2207_groupTitle']"
+        if scroll_until_element_visible(driver, target_xpath):
+            print("스크롤 완료. 첨부파일을 화면에 표시.")
+        else:
+            print("첨부파일을 찾지 못했습니다.")
 
         # 전체 선택 체크박스 클릭
         checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
@@ -224,10 +265,9 @@ if rows:  # tr 요소가 하나 이상 있을 경우
         # 파일 열기
         if latest_file:
             print(f"최근 다운로드된 파일: {latest_file}")
-            open_file(latest_file)
+            handle_file(latest_file)
         else:
             print("다운로드된 파일이 없습니다.")
-
 
 else:
     search_box_click.click()
