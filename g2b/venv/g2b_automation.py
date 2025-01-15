@@ -63,6 +63,20 @@ def close_popup(css_selector):
     except TimeoutException:
         print("팝업이 없습니다.")
 
+# 최근 다운로드된 파일을 찾는 함수
+def get_latest_downloaded_file(download_dir):
+    """
+    다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환합니다.
+    """
+    files = os.listdir(download_dir)
+    files_with_path = [os.path.join(download_dir, file) for file in files]
+    latest_file = max(files_with_path, key=os.path.getmtime)
+    return latest_file
+
+# 파일 열기 함수 (Windows에서 사용)
+def open_file(file_path):
+    os.startfile(file_path)
+
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013455_close",
@@ -204,14 +218,17 @@ if rows:  # tr 요소가 하나 이상 있을 경우
         download_button.click()
         time.sleep(1)
 
+        # 다운로드된 최신 파일 찾기
+        latest_file = get_latest_downloaded_file(download_dir)
+
         # 파일 열기
-        
+        if latest_file:
+            print(f"최근 다운로드된 파일: {latest_file}")
+            open_file(latest_file)
+        else:
+            print("다운로드된 파일이 없습니다.")
 
 
-
-
-
-        
 else:
     search_box_click.click()
     search_word = '레포트'
