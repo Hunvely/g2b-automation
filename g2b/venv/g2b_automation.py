@@ -9,8 +9,6 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 import os
-import pyhwp
-
 import chromedriver_autoinstaller
 
 chromedriver_autoinstaller.install()
@@ -42,15 +40,6 @@ options.add_experimental_option("detach", True)
 
 driver = webdriver.Chrome(options)
 
-# 나라장터 페이지로 이동동
-driver.get("https://www.g2b.go.kr")
-
-# 나라장터 페이지 로드 완료될 때까지 sleep 주기
-time.sleep(10)
-
-# 창 최대화
-driver.maximize_window()
-
 def random_wait():
     time.sleep(random.uniform(1.5, 4.0))  # 1.5초에서 4초 사이의 랜덤 대기
 
@@ -58,14 +47,14 @@ def random_wait():
 def close_popup(css_selector):
     try:
         # 요소가 존재하고 클릭 가능할 경우 닫기
-        element = WebDriverWait(driver, 5).until(
+        element = WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, css_selector))
         )
         element.click()
     except TimeoutException:
         print("팝업이 없습니다.")
 
-def scroll_until_element_visible(driver, xpath, max_scrolls=20, scroll_step=300, wait_time=1):
+def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300, wait_time=1):
     for scroll_count in range(max_scrolls):
         try:
             # 첨부파일 요소가 화면에 나타났는지 확인
@@ -119,6 +108,17 @@ def handle_file(file_path):
         # 기타 파일 열기
         open_file(file_path)
 
+
+
+# 나라장터 페이지로 이동동
+driver.get("https://www.g2b.go.kr")
+
+# 나라장터 페이지 로드 완료될 때까지 sleep 주기
+time.sleep(8)
+
+# 창 최대화
+driver.maximize_window()
+
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013455_close",
@@ -147,7 +147,6 @@ pre_specification = "#mf_wfm_container_radSrchTy > li.w2radio_item.w2radio_item_
 pre_specification_click = driver.find_element(By.CSS_SELECTOR, pre_specification)
 pre_specification_click.click()
 time.sleep(2)
-
 
 # 어제 날짜 계산
 yesterday = datetime.now() - timedelta(days=1)
@@ -204,80 +203,92 @@ search_box_click = driver.find_element(By.CSS_SELECTOR, search_box)
 search_box_click.click()
 time.sleep(1)
 
-# 사업명 입력
-search_word = '구축'
-search_box_click.send_keys(search_word)
-time.sleep(1)
+# 검색 키워드
+search_keywords = ['Report', '리포트', '구축', '레포트', '리포팅']
 
-# 검색 버튼 클릭 (리스트 표시까지 완료)
-search_button = "#mf_wfm_container_btnS0001"
-search_button_click = driver.find_element(By.CSS_SELECTOR, search_button)
-search_button_click.click()
-
-# 리스트에 항목 있는지 확인
-tbody_id = "mf_wfm_container_gridView1_body_tbody"
-rows = driver.find_elements(By.CSS_SELECTOR, f"#{tbody_id} tr")
-time.sleep(2)
-
-if rows:  # tr 요소가 하나 이상 있을 경우
-    for row in rows:
-        # 각 row에서 링크를 찾기
-        link = row.find_element(By.CSS_SELECTOR, "td a")
-        
-        # 링크가 클릭 가능할 때까지 대기
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
-        
-        # 링크 클릭
-        link.click()
-
-        # 새 페이지 로드 대기 (예: 페이지 헤더 제목이 로드될 때까지)
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
-            )
-            print("새 페이지 로드 완료")
-        except TimeoutException:
-            print("새 페이지 로드 실패")
-            continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
-
-        time.sleep(2)
-
-        # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-        target_xpath = "//*[@id='wq_uuid_2207_groupTitle']"
-        if scroll_until_element_visible(driver, target_xpath):
-            print("스크롤 완료. 첨부파일을 화면에 표시.")
-        else:
-            print("첨부파일을 찾지 못했습니다.")
-
-        # 전체 선택 체크박스 클릭
-        checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
-        checkbox.click()
-        time.sleep(1)
-
-        # 파일 다운로드
-        download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
-        download_button.click()
-        time.sleep(1)
-
-        # 다운로드된 최신 파일 찾기
-        latest_file = get_latest_downloaded_file(download_dir)
-
-        # 파일 열기
-        if latest_file:
-            print(f"최근 다운로드된 파일: {latest_file}")
-            handle_file(latest_file)
-        else:
-            print("다운로드된 파일이 없습니다.")
-
-else:
-    search_box_click.click()
-    search_word = '레포트'
+for search_word in search_keywords:
+    
+    # 사업명 입력
     search_box_click.send_keys(search_word)
     time.sleep(1)
-    search_button_click.click()
 
-time.sleep(10)
-driver.quit()
+    # 검색 버튼 클릭 (리스트 표시까지 완료)
+    search_button = "#mf_wfm_container_btnS0001"
+    search_button_click = driver.find_element(By.CSS_SELECTOR, search_button)
+    search_button_click.click()
+    time.sleep(1)
+
+    # 리스트에 항목 있는지 확인 (display none을 확인)
+    tbody_id = "mf_wfm_container_gridView1_body_tbody"
+    rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+    time.sleep(1)
+
+    # 검색 결과가 없으면 다음 키워드로 계속
+    if not any(row.value_of_css_property('display') != 'none' for row in rows):
+        print(f"'{search_word}' 검색 결과가 없습니다. 다음 키워드로 넘어갑니다.")
+        time.sleep(1)
+        search_box_click.click()
+        time.sleep(1)
+        search_box_click.clear()
+        time.sleep(2)
+        continue  # 검색 결과가 없으면 다음 키워드로 넘어감
+
+    for row in rows:
+        # tr 요소가 화면에 보이는지 확인
+        if row.value_of_css_property('display') != 'none':  # 화면에 표시되는 tr만 처리
+
+            # 각 row에서 링크를 찾기
+            link = row.find_element(By.CSS_SELECTOR, "td a")
+            
+            # 링크가 클릭 가능할 때까지 대기
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
+            
+            # 링크 클릭
+            link.click()
+
+            # 새 페이지 로드 대기 (예: 페이지 헤더 제목이 로드될 때까지)
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
+                )
+                print("새 페이지 로드 완료")
+            except TimeoutException:
+                print("새 페이지 로드 실패")
+                continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
+
+            time.sleep(2)
+
+            # 스크롤 조건: 첨부파일이 화면에 보일 때까지
+            target_xpath = "//*[@id='wq_uuid_2207_groupTitle']"
+            if scroll_until_element_visible(driver, target_xpath):
+                print("스크롤 완료. 첨부파일을 화면에 표시.")
+            else:
+                print("첨부파일을 찾지 못했습니다.")
+
+            # 전체 선택 체크박스 클릭
+            checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
+            checkbox.click()
+            time.sleep(1)
+
+            # 파일 다운로드
+            download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
+            download_button.click()
+            time.sleep(1)
+
+            # 다운로드된 최신 파일 찾기
+            latest_file = get_latest_downloaded_file(download_dir)
+            time.sleep(1)
+
+            # 파일 열기
+            if latest_file:
+                print(f"최근 다운로드된 파일: {latest_file}")
+                handle_file(latest_file)
+            else:
+                print("다운로드된 파일이 없습니다.")
+
+# 모든 검색 키워드를 처리한 후 종료
+print("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
+sys.exit()
 
 input()
 
