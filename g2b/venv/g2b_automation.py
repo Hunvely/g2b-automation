@@ -157,21 +157,38 @@ def screenshot_hwp(keyword, output_image):
         
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         window.type_keys("^f")  # Ctrl+F (검색 단축키)
-        time.sleep(1)
+        time.sleep(2)
         window.type_keys(keyword)  # 검색어 입력
+        time.sleep(2)
         window.type_keys("\n")  # Enter (검색 실행)
         
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
 
-        # 스크린샷 찍을 영역 (좌표값을 수동으로 조정해야 할 수 있습니다)
-        x1, y1 = 100, 200  # 좌측 상단 좌표
-        x2, y2 = 600, 400  # 우측 하단 좌표
+        capture_count = 0
 
-        # 화면 캡처 (해당 영역만 캡처)
-        screenshot = pyautogui.screenshot(region=(x1, y1, x2 - x1, y2 - y1))
-        screenshot.save(output_image)
-        print(f"스크린샷 저장 완료: {output_image}")
+        while True:
+            try:
+                # 스크린샷 영역 설정
+                x1, y1 = 100, 200  # 좌측 상단 좌표
+                width, height = 1140, 600  # 가로 1140, 세로 600
+                x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+
+                # 스크린샷 찍기
+                screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
+                capture_count += 1
+                screenshot_file = os.path.join(screenshot_dir, f"{keyword}_capture_{capture_count}.png")
+                screenshot.save(screenshot_file)
+                print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                # 다음 검색 결과로 이동
+                window.type_keys("{F3}")  # F3 (다음 검색 결과)
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
+            except Exception as e:
+                print(f"검색 결과 끝 또는 오류: {e}")
+                break
+
+        print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
 
     except Exception as e:
         print(f"한글 파일 처리 중 오류 발생: {e}")
@@ -294,7 +311,7 @@ time.sleep(1)
 search_keywords = ['구축', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
-file_search_keywords = ['리포팅', '레포팅', '리포트', 'Report', '전자문서']
+file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
 
 for search_word in search_keywords:
     
@@ -384,7 +401,7 @@ for search_word in search_keywords:
                 
                 if file_extension == 'hwp':  # HWP 파일인 경우
                     logging.info("한글 파일 처리 시작")
-                    handle_hwp_file(latest_file, search_word)
+                    handle_hwp_file(latest_file, file_search_keywords)
                 else:
                     logging.info("한글 파일이 아니므로 다른 파일 처리")
                     handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
