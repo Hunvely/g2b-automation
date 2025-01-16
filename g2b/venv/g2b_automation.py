@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 import os
 import chromedriver_autoinstaller
+import pyautogui
+import pywinauto
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +23,12 @@ options = Options()
 
 # 사용자 홈 디렉토리 가져오기
 home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
+
+# 한글 파일 경로
+hanword_path = r"C:\Program Files (x86)\Hnc\Hwp80\Hwp.exe"
+
+# 사용자 바탕화면에 있는 "스크린샷" 폴더 경로 설정
+screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
 
 # 바탕화면의 "첨부파일" 폴더 경로 설정
 download_dir = os.path.join(home_dir, "Desktop", "첨부파일")
@@ -112,6 +120,69 @@ def handle_file(file_path):
     else:
         # 기타 파일 열기
         open_file(file_path)
+
+def close_warning_window_hangle(app):
+    windows = app.windows()
+    for win in windows:
+        try:
+            rect = win.rectangle()
+            width = rect.right - rect.left
+            height = rect.bottom - rect.top
+            title = win.window_text()
+
+            # 조건: 버전 차이 경고 메세지지
+            if width == 201 and height == 241:
+                print(f"경고 창 감지: {title} (크기: {width}x{height})")
+                # 창 위치로 마우스 이동 및 Enter 키 입력
+                x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
+                pyautogui.click(x, y)
+                pyautogui.press("enter")
+                time.sleep(1)
+                return True
+        except Exception as e:
+            print(f"창 탐색 중 오류 발생: {e}")
+    return False
+
+def screenshot_hwp(keyword, output_image):
+    # 한글 프로그램 자동화
+    try:
+        app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
+
+        # 경고 창 닫기
+        if close_warning_window_hangle(app):
+            print("경고 메시지가 닫혔습니다.")
+
+        window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+        window.set_focus()  # 한글 창에 포커스를 맞춤
+        
+        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
+        window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        time.sleep(1)
+        window.type_keys(keyword)  # 검색어 입력
+        window.type_keys("\n")  # Enter (검색 실행)
+        
+        # 검색된 텍스트 영역이 활성화되도록 대기
+        time.sleep(2)
+
+        # 스크린샷 찍을 영역 (좌표값을 수동으로 조정해야 할 수 있습니다)
+        x1, y1 = 100, 200  # 좌측 상단 좌표
+        x2, y2 = 600, 400  # 우측 하단 좌표
+
+        # 화면 캡처 (해당 영역만 캡처)
+        screenshot = pyautogui.screenshot(region=(x1, y1, x2 - x1, y2 - y1))
+        screenshot.save(output_image)
+        print(f"스크린샷 저장 완료: {output_image}")
+
+    except Exception as e:
+        print(f"한글 파일 처리 중 오류 발생: {e}")
+
+# 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_hwp_file(file_path, keyword):
+    open_file(file_path)
+
+    # 키워드 검색 후 스크린샷 찍기
+    output_image = os.path.join(screenshot_dir, "screenshot.png") # 파일 이름 사업명 + 키워드 로 변경 예정
+    screenshot_hwp(keyword, output_image)
 
 
 
@@ -220,7 +291,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['Report', '리포트', '구축', '레포트', '리포팅']
+search_keywords = ['구축', '리포트', 'Report', '레포트', '리포팅']
+
+# 파일 내 검색 키워드
+file_search_keywords = ['리포팅', '레포팅', '리포트', 'Report', '전자문서']
 
 for search_word in search_keywords:
     
@@ -305,9 +379,19 @@ for search_word in search_keywords:
             # 파일 열기
             if latest_file:
                 logging.info(f"최근 다운로드된 파일: {latest_file}")
-                handle_file(latest_file)
+                # handle_file(latest_file)
+                file_extension = latest_file.lower().split('.')[-1]  # 확장자 확인
+                
+                if file_extension == 'hwp':  # HWP 파일인 경우
+                    logging.info("한글 파일 처리 시작")
+                    handle_hwp_file(latest_file, search_word)
+                else:
+                    logging.info("한글 파일이 아니므로 다른 파일 처리")
+                    handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
             else:
                 logging.warning("다운로드된 파일이 없습니다.")
+
+            
 
 # 모든 검색 키워드를 처리한 후 종료
 logging.info("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
