@@ -1,6 +1,7 @@
 import sys
 import time
 import logging
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,6 +12,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 import os
+import zipfile
 import chromedriver_autoinstaller
 import pyautogui
 import pywinauto
@@ -85,11 +87,40 @@ def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300,
     logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {xpath}")
     return False
 
+# 상세규격정보 페이지 데이터 추출
+def extarct_data(driver):
+    try:
+        # 현재 페이지의 HTML 소스 가져오기
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # 데이터 추출
+        data = {
+        "사전규격등록번호": soup.select_one("input[title='사전규격등록번호']").get_text(strip=True) if soup.select_one("input[title='사전규격등록번호']") else "N/A",
+        "사전규격명": soup.select_one("label[id^='mf_wfm_container_wq_uuid_']").get_text(strip=True) if soup.select_one("label[id^='mf_wfm_container_wq_uuid_']") else "N/A",
+        "수요기관": soup.select_one("input[title='수요기관']").get_text(strip=True) if soup.select_one("input[title='수요기관']") else "N/A",
+        "공고기관": soup.select_one("input[title='공고기관']").get_text(strip=True) if soup.select_one("input[title='공고기관']") else "N/A",
+        "담당자": soup.select_one("input[title='공고기관담당자명(전화번호)']").get_text(strip=True) if soup.select_one("input[title='공고기관담당자명(전화번호)']") else "N/A",
+        "배정예산액": soup.select_one("input[title='배정예산액%28부가세포함%29']").get_text(strip=True) if soup.select_one("input[title='배정예산액%28부가세포함%29']") else "N/A",
+        "의견등록마감일시": soup.select_one("input[title='시분']").get_text(strip=True) if soup.select_one("input[title='시분']") else "N/A",
+        }
+        return data
+    except Exception as e:
+        logging.error(f"데이터 추출 중 오류 발생: {e}")
+        return None
+
 # ZIP 파일을 지정된 폴더로 추출
-def extract_zip(zip_file_path, extract_to_folder):
-    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to_folder)
-    logging.info(f"ZIP 파일 {zip_file_path}이(가) {extract_to_folder}에 추출되었습니다.")
+def extract_zip(file_path, extract_folder):
+    try:
+        # ZIP 파일 열기
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            # 압축 해제
+            zip_ref.extractall(extract_folder)
+            print(f"ZIP 파일이 {extract_folder}에 성공적으로 압축 해제되었습니다.")
+    except zipfile.BadZipFile:
+        print(f"잘못된 ZIP 파일: {file_path}")
+    except Exception as e:
+        print(f"ZIP 파일 해제 중 오류 발생: {str(e)}")
 
 # 다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환
 def get_latest_downloaded_file(download_dir):
@@ -104,11 +135,21 @@ def open_file(file_path):
 
 # 다운로드된 파일의 확장자에 따라 처리
 def handle_file(file_path):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
     file_extension = file_path.lower().split('.')[-1]
+    
+    # 다운로드 중인 .crdownload 파일 무시
+    if file_extension == 'crdownload':
+        print(f"다운로드가 완료되지 않은 파일입니다: {file_path}")
+        return
 
     if file_extension == 'zip':
         # ZIP 파일 처리
-        extract_folder = os.path.join(download_dir, "extracted_files")
+        extract_folder = os.path.join(download_dir, "zip 압축 해제 폴더")
         if not os.path.exists(extract_folder):
             os.makedirs(extract_folder)
         extract_zip(file_path, extract_folder)
@@ -216,8 +257,9 @@ driver.maximize_window()
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013455_close",
+    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013472_close",
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013415_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013414_close",
+    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013414_close"
 ]
 
 for popup_selector in popups:
@@ -282,7 +324,7 @@ logging.info(f"종료일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
-detail = "#wq_uuid_1918_btnSearchToggle"
+detail = "[id$='_btnSearchToggle']"
 detail_click = driver.find_element(By.CSS_SELECTOR, detail)
 detail_click.click()
 logging.info("상세 조건 펼치기 완료")
@@ -308,7 +350,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['구축', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['정보시스템', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
@@ -368,8 +410,17 @@ for search_word in search_keywords:
 
             time.sleep(2)
 
+            # BeautifulSoup을 이용한 데이터 추출
+            data = extarct_data(driver)
+            if data:
+                logging.info(f"추출된 데이터: {data}")
+                time.sleep(1)
+            else:
+                logging.warning("데이터 추출 실패")
+                time.sleep(1)
+
             # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-            target_xpath = "//*[@id='wq_uuid_2207_groupTitle']"
+            target_xpath = "//*[@id='wq_uuid_*_groupTitle']"
             if scroll_until_element_visible(driver, target_xpath):
                 logging.info("첨부파일 영역으로 이동")
             else:
