@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException
 import os
 import zipfile
 import chromedriver_autoinstaller
@@ -384,94 +385,114 @@ for search_word in search_keywords:
         time.sleep(2)
         continue  # 검색 결과가 없으면 다음 키워드로 넘어감
 
-    for row in rows:
-        # tr 요소가 화면에 보이는지 확인
-        if row.value_of_css_property('display') != 'none':  # 화면에 표시되는 tr만 처리
+    # 현재 작업 중인 항목 인덱스 추적
+    current_index = 0
 
-            # 각 row에서 링크를 찾기
-            link = row.find_element(By.CSS_SELECTOR, "td a")
-            
-            # 링크가 클릭 가능할 때까지 대기
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
-            
-            # 링크 클릭
-            link.click()
-            logging.info("항목의 상세규격정보 페이지로 이동")
+    while current_index < len(rows):
+        row = rows[current_index]
+        try:
+            # tr 요소가 화면에 보이는지 확인
+            if row.value_of_css_property('display') != 'none':  # 화면에 표시되는 tr만 처리
 
-            # 새 페이지 로드 대기
-            try:
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
-                )
-                logging.info("새 페이지 로드 완료")
-            except TimeoutException:
-                logging.warning("새 페이지 로드 실패")
-                continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
-
-            time.sleep(2)
-
-            # 첨부파일 여부 확인
-            try:
-                no_file = driver.find_element(By.XPATH, "//*[contains(@id, '_grdFile_noresult')]")
-                time.sleep(2)
-                if no_file.is_displayed():
-                    logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
-                    driver.back()  # 이전 페이지로 이동
-                    time.sleep(1)
-                    continue  # 다음 항목으로 넘어감
-            except Exception as e:
-                logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
-
-            # BeautifulSoup을 이용한 데이터 추출
-            data = extarct_data(driver)
-            if data:
-                logging.info(f"추출된 데이터: {data}")
-                time.sleep(1)
-            else:
-                logging.warning("데이터 추출 실패")
-                time.sleep(1)
-
-            # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-            target_xpath = "//*[@id='wq_uuid_*_groupTitle']"
-            if scroll_until_element_visible(driver, target_xpath):
-                logging.info("첨부파일 영역으로 이동")
-            else:
-                logging.warning("첨부파일을 찾지 못했습니다.")
-
-            # 전체 선택 체크박스 클릭
-            checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
-            checkbox.click()
-            logging.info("모든 첨부파일을 선택")
-            time.sleep(2)
-
-            # 파일 다운로드
-            logging.info("파일 다운로드 시작")
-            download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
-            download_button.click()
-            logging.info("파일 다운로드 완료")
-            time.sleep(1)
-
-            # 다운로드된 최신 파일 찾기
-            logging.info("다운로드된 파일 찾는 중")
-            latest_file = get_latest_downloaded_file(download_dir)
-            time.sleep(2)
-
-            # 파일 열기
-            if latest_file:
-                logging.info(f"최근 다운로드된 파일: {latest_file}")
-                # handle_file(latest_file)
-                file_extension = latest_file.lower().split('.')[-1]  # 확장자 확인
+                # 각 row에서 링크를 찾기
+                link = row.find_element(By.CSS_SELECTOR, "td a")
                 
-                if file_extension == 'hwp':  # HWP 파일인 경우
-                    logging.info("한글 파일 처리 시작")
-                    handle_hwp_file(latest_file, file_search_keywords)
-                else:
-                    logging.info("한글 파일이 아니므로 다른 파일 처리")
-                    handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
-            else:
-                logging.warning("다운로드된 파일이 없습니다.")
+                # 링크가 클릭 가능할 때까지 대기
+                WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
+                
+                # 링크 클릭
+                link.click()
+                logging.info(f"리스트에서 {row}번째 항목의 상세규격정보 페이지로 이동")
 
-            
+                # 새 페이지 로드 대기
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
+                    )
+                    logging.info("새 페이지 로드 완료")
+                except TimeoutException:
+                    logging.warning("새 페이지 로드 실패")
+                    current_index += 1
+                    continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
+
+                time.sleep(2)
+
+                # 첨부파일 여부 확인
+                try:
+                    no_file = driver.find_element(By.XPATH, "//*[contains(@id, '_grdFile_noresult')]")
+                    time.sleep(1)
+                    if no_file.is_displayed():
+                        logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
+                        driver.back()  # 이전 페이지로 이동
+                        time.sleep(1)
+
+                        # 페이지가 로드된 후 다시 rows 가져오기
+                        WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.ID, "mf_wfm_container_gridView1_body_tbody"))
+                        )
+                        rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+                        current_index += 1
+                        time.sleep(1)
+                        continue  # 다음 항목으로 넘어감
+                except Exception as e:
+                    logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
+
+                # BeautifulSoup을 이용한 데이터 추출
+                data = extarct_data(driver)
+                if data:
+                    logging.info(f"추출된 데이터: {data}")
+                    time.sleep(1)
+                else:
+                    logging.warning("데이터 추출 실패")
+                    time.sleep(1)
+
+                # 스크롤 조건: 첨부파일이 화면에 보일 때까지
+                target_xpath = "//*[@id='wq_uuid_*_groupTitle']"
+                if scroll_until_element_visible(driver, target_xpath):
+                    logging.info("첨부파일 영역으로 이동")
+                else:
+                    logging.warning("첨부파일을 찾지 못했습니다.")
+
+                # 전체 선택 체크박스 클릭
+                checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
+                checkbox.click()
+                logging.info("모든 첨부파일을 선택")
+                time.sleep(2)
+
+                # 파일 다운로드
+                logging.info("파일 다운로드 시작")
+                download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
+                download_button.click()
+                logging.info("파일 다운로드 완료")
+                time.sleep(1)
+
+                # 다운로드된 최신 파일 찾기
+                logging.info("다운로드된 파일 찾는 중")
+                latest_file = get_latest_downloaded_file(download_dir)
+                time.sleep(2)
+
+                # 파일 열기
+                if latest_file:
+                    logging.info(f"최근 다운로드된 파일: {latest_file}")
+                    # handle_file(latest_file)
+                    file_extension = latest_file.lower().split('.')[-1]  # 확장자 확인
+                    
+                    if file_extension == 'hwp':  # HWP 파일인 경우
+                        logging.info("한글 파일 처리 시작")
+                        handle_hwp_file(latest_file, file_search_keywords)
+                    else:
+                        logging.info("한글 파일이 아니므로 다른 파일 처리")
+                        handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
+                else:
+                    logging.warning("다운로드된 파일이 없습니다.")
+
+        except StaleElementReferenceException:
+            logging.warning("Stale element encountered. 현재 row를 건너뜁니다.")
+            current_index += 1  # Stale element가 발생하면 건너뛰고 계속 진행
+        except Exception as e:
+            logging.error(f"예상치 못한 오류 발생: {e}")
+            current_index += 1  # 오류가 발생하면 해당 항목을 건너뛰고 다음 항목으로 넘어감
+                
 
 # 모든 검색 키워드를 처리한 후 종료
 logging.info("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
