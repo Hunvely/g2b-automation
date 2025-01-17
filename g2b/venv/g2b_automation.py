@@ -410,6 +410,18 @@ for search_word in search_keywords:
 
             time.sleep(2)
 
+            # 첨부파일 여부 확인
+            try:
+                no_file = driver.find_element(By.XPATH, "//*[contains(@id, '_grdFile_noresult')]")
+                time.sleep(2)
+                if no_file.is_displayed():
+                    logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
+                    driver.back()  # 이전 페이지로 이동
+                    time.sleep(1)
+                    continue  # 다음 항목으로 넘어감
+            except Exception as e:
+                logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
+
             # BeautifulSoup을 이용한 데이터 추출
             data = extarct_data(driver)
             if data:
