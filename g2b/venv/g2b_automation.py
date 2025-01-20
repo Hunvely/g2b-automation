@@ -71,11 +71,11 @@ def close_popup(css_selector):
     except TimeoutException:
         logging.info(f"팝업 없음: {css_selector}")
 
-def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300, wait_time=1):
+def scroll_until_element_visible(driver, id, max_scrolls=10, scroll_step=300, wait_time=1):
     for scroll_count in range(max_scrolls):
         try:
             # 첨부파일 요소가 화면에 나타났는지 확인
-            element = driver.find_element(By.XPATH, xpath)
+            element = driver.find_element(By.ID, id)
             if element.is_displayed():
                 return True
         except NoSuchElementException:
@@ -85,7 +85,7 @@ def scroll_until_element_visible(driver, xpath, max_scrolls=10, scroll_step=300,
         driver.execute_script(f"window.scrollBy(0, {scroll_step});")
         time.sleep(wait_time)
 
-    logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {xpath}")
+    logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {id}")
     return False
 
 # 상세규격정보 페이지 데이터 추출
@@ -259,8 +259,9 @@ driver.maximize_window()
 popups = [
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013455_close",
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013472_close",
+    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013473_close",
     "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013415_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013414_close"
+    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013414_close",
 ]
 
 for popup_selector in popups:
@@ -268,8 +269,8 @@ for popup_selector in popups:
     time.sleep(1)
 
 # 발주 메뉴 클릭
-ordering = "#mf_wfm_gnb_wfm_gnbMenu_wq_uuid_522"
-ordering_click = driver.find_element(By.CSS_SELECTOR, ordering)
+ordering = "mf_wfm_gnb_wfm_gnbMenu_genDepth1_0_btn_menuLvl1_span"
+ordering_click = driver.find_element(By.ID, ordering)
 ordering_click.click()
 logging.info("발주 메뉴 클릭")
 time.sleep(1)
@@ -289,8 +290,8 @@ logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
 # 어제 날짜 계산
-yesterday = datetime.now() - timedelta(days=1)
-yesterday_str = yesterday.strftime("%Y%m%d")
+# yesterday = datetime.now() - timedelta(days=1)
+# yesterday_str = yesterday.strftime("%Y%m%d")
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
@@ -304,8 +305,8 @@ logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
-start_date_click.send_keys(yesterday_str)
-logging.info(f"시작일 {yesterday_str} 입력 완료")
+start_date_click.send_keys(20250117)
+logging.info(f"시작일 {20250117} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -320,8 +321,8 @@ logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
-end_date_click.send_keys(yesterday_str)
-logging.info(f"종료일 {yesterday_str} 입력 완료")
+end_date_click.send_keys(20250117)
+logging.info(f"종료일 {20250117} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
@@ -447,21 +448,22 @@ for search_word in search_keywords:
                     time.sleep(1)
 
                 # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-                target_xpath = "//*[@id='wq_uuid_*_groupTitle']"
-                if scroll_until_element_visible(driver, target_xpath):
+                target_id = "wq_uuid_2374_groupTitle"
+                if scroll_until_element_visible(driver, target_id):
                     logging.info("첨부파일 영역으로 이동")
                 else:
                     logging.warning("첨부파일을 찾지 못했습니다.")
 
                 # 전체 선택 체크박스 클릭
-                checkbox = driver.find_element(By.XPATH, "//*[contains(@id, '_header__column1_checkboxLabel__id')]")
+                checkbox = driver.find_element(By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']")
                 checkbox.click()
                 logging.info("모든 첨부파일을 선택")
                 time.sleep(2)
-
+    
                 # 파일 다운로드
                 logging.info("파일 다운로드 시작")
-                download_button = driver.find_element(By.XPATH, "//*[contains(@id, '_btnFileDown')]")
+                download_button = driver.find_element(By.CSS_SELECTOR, "[id*='_btnFileDown']")
+                time.sleep(1)
                 download_button.click()
                 logging.info("파일 다운로드 완료")
                 time.sleep(1)
