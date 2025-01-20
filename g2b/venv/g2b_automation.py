@@ -71,11 +71,12 @@ def close_popup(css_selector):
     except TimeoutException:
         logging.info(f"팝업 없음: {css_selector}")
 
-def scroll_until_element_visible(driver, id, max_scrolls=10, scroll_step=300, wait_time=1):
+def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_time=1):
+    target_xpath = "//*[contains(@id, 'wq_uuid_') and contains(@class, 'w2textbox')]"
     for scroll_count in range(max_scrolls):
         try:
             # 첨부파일 요소가 화면에 나타났는지 확인
-            element = driver.find_element(By.ID, id)
+            element = driver.find_element(By.XPATH, target_xpath)
             if element.is_displayed():
                 return True
         except NoSuchElementException:
@@ -403,7 +404,7 @@ for search_word in search_keywords:
                 
                 # 링크 클릭
                 link.click()
-                logging.info(f"리스트에서 {row}번째 항목의 상세규격정보 페이지로 이동")
+                logging.info(f"리스트에서 {current_index+1}번째 항목의 상세규격정보 페이지로 이동")
 
                 # 새 페이지 로드 대기
                 try:
@@ -448,8 +449,7 @@ for search_word in search_keywords:
                     time.sleep(1)
 
                 # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-                target_id = "wq_uuid_2374_groupTitle"
-                if scroll_until_element_visible(driver, target_id):
+                if scroll_until_element_visible(driver):
                     logging.info("첨부파일 영역으로 이동")
                 else:
                     logging.warning("첨부파일을 찾지 못했습니다.")
