@@ -28,7 +28,7 @@ options = Options()
 home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
 
 # 한글 파일 경로
-hanword_path = r"C:\Program Files (x86)\Hnc\Hwp80\Hwp.exe"
+hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office 2024\\HOffice130\Bin\\Hwp.exe"
 
 # 사용자 바탕화면에 있는 "스크린샷" 폴더 경로 설정
 screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
@@ -195,16 +195,25 @@ def screenshot_hwp(keyword, output_image):
         if close_warning_window_hangle(app):
             print("경고 메시지가 닫혔습니다.")
 
-        window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
-        window.set_focus()  # 한글 창에 포커스를 맞춤
+        hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+
+        # 한글 로딩
+        time.sleep(3)
+
+        # 모든 컨트롤 요소들 출력 (child_window)
+        hwp_window.print_control_identifiers()
         
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
-        window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        hwp_window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        logging.info("검색 모달 표시")
         time.sleep(2)
-        window.type_keys(keyword)  # 검색어 입력
+
+        hwp_window.type_keys(keyword)  # 검색어 입력
+        logging.info("검색어 입력")
         time.sleep(2)
-        window.type_keys("\n")  # Enter (검색 실행)
         
+        # 검색색
+        hwp_window.type_keys("{ENTER}")
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
 
@@ -214,7 +223,7 @@ def screenshot_hwp(keyword, output_image):
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
-                width, height = 1140, 600  # 가로 1140, 세로 600
+                width, height = 2100, 800
                 x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
 
                 # 스크린샷 찍기
@@ -225,8 +234,10 @@ def screenshot_hwp(keyword, output_image):
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                window.type_keys("{F3}")  # F3 (다음 검색 결과)
+                hwp_window.set_focus()  # 포커스를 해당 영역으로 이동
+                hwp_window.type_keys("{ENTER}")  # 다음 검색 결과
                 time.sleep(2)  # 다음 결과가 로드되도록 대기
+
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
                 break
@@ -237,13 +248,13 @@ def screenshot_hwp(keyword, output_image):
         print(f"한글 파일 처리 중 오류 발생: {e}")
 
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
-def handle_hwp_file(file_path, keyword):
+def handle_hwp_file(file_path, keywords):
     open_file(file_path)
 
-    # 키워드 검색 후 스크린샷 찍기
-    output_image = os.path.join(screenshot_dir, "screenshot.png") # 파일 이름 사업명 + 키워드 로 변경 예정
-    screenshot_hwp(keyword, output_image)
-
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        output_image = os.path.join(screenshot_dir, f"screenshot_{keyword}.png")  # 파일 이름 사업명 + 키워드로 변경 예정
+        screenshot_hwp(keyword, output_image)
 
 
 # 나라장터 페이지로 이동동
@@ -258,11 +269,11 @@ driver.maximize_window()
 
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013455_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013472_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013473_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013415_close",
-    "#mf_wfm_container_wq_uuid_869_wq_uuid_876_poupR23AB0000013414_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013477_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013472_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013473_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013415_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013414_close",
 ]
 
 for popup_selector in popups:
