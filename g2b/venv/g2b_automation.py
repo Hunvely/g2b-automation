@@ -1,6 +1,7 @@
 import sys
 import time
 import logging
+import random
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -91,20 +92,26 @@ def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_ti
 
 # 상세규격정보 페이지 데이터 추출
 def extarct_data(driver):
-    try:
-        # 현재 페이지의 HTML 소스 가져오기
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
 
+    # 각 요소 찾기
+    사전규격등록번호 = driver.find_element(By.CSS_SELECTOR, "input[title^='사전규격등록번호']")
+    사전규격명 = driver.find_element(By.CSS_SELECTOR, "td[data-title^='사전규격명']")
+    수요기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='수요기관']")
+    공고기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관']")
+    담당자 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']")
+    배정예산액 = driver.find_element(By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']")
+    의견등록마감일시 = driver.find_element(By.CSS_SELECTOR, "input[title^='시분']")
+
+    try:
         # 데이터 추출
         data = {
-        "사전규격등록번호": soup.select_one("input[title='사전규격등록번호']").get_text(strip=True) if soup.select_one("input[title='사전규격등록번호']") else "N/A",
-        "사전규격명": soup.select_one("label[id^='mf_wfm_container_wq_uuid_']").get_text(strip=True) if soup.select_one("label[id^='mf_wfm_container_wq_uuid_']") else "N/A",
-        "수요기관": soup.select_one("input[title='수요기관']").get_text(strip=True) if soup.select_one("input[title='수요기관']") else "N/A",
-        "공고기관": soup.select_one("input[title='공고기관']").get_text(strip=True) if soup.select_one("input[title='공고기관']") else "N/A",
-        "담당자": soup.select_one("input[title='공고기관담당자명(전화번호)']").get_text(strip=True) if soup.select_one("input[title='공고기관담당자명(전화번호)']") else "N/A",
-        "배정예산액": soup.select_one("input[title='배정예산액%28부가세포함%29']").get_text(strip=True) if soup.select_one("input[title='배정예산액%28부가세포함%29']") else "N/A",
-        "의견등록마감일시": soup.select_one("input[title='시분']").get_text(strip=True) if soup.select_one("input[title='시분']") else "N/A",
+            "사전규격등록번호": 사전규격등록번호.get_attribute('value') or "N/A",
+            "사전규격명": 사전규격명.text or "N/A",
+            "수요기관": 수요기관.get_attribute('value') or "N/A",
+            "공고기관": 공고기관.get_attribute('value') or "N/A",
+            "담당자": 담당자.get_attribute('value') or "N/A",
+            "배정예산액": 배정예산액.get_attribute('value') or "N/A",
+            "의견등록마감일시": 의견등록마감일시.get_attribute('value') or "N/A",
         }
         return data
     except Exception as e:
@@ -186,7 +193,7 @@ def close_warning_window_hangle(app):
             print(f"창 탐색 중 오류 발생: {e}")
     return False
 
-def screenshot_hwp(keyword, output_image):
+def screenshot_hwp(keyword, output_image, 사전규격명):
     # 한글 프로그램 자동화
     try:
         app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
@@ -212,8 +219,10 @@ def screenshot_hwp(keyword, output_image):
         logging.info("검색어 입력")
         time.sleep(2)
         
-        # 검색색
+        # 검색
         hwp_window.type_keys("{ENTER}")
+        logging.info("검색 시작")
+
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
 
@@ -223,13 +232,13 @@ def screenshot_hwp(keyword, output_image):
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
-                width, height = 2100, 800
+                width, height = 1800, 800
                 x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
 
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{keyword}_capture_{capture_count}.png")
+                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
@@ -248,13 +257,13 @@ def screenshot_hwp(keyword, output_image):
         print(f"한글 파일 처리 중 오류 발생: {e}")
 
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
-def handle_hwp_file(file_path, keywords):
+def handle_hwp_file(file_path, keywords, 사전규격명):
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         output_image = os.path.join(screenshot_dir, f"screenshot_{keyword}.png")  # 파일 이름 사업명 + 키워드로 변경 예정
-        screenshot_hwp(keyword, output_image)
+        screenshot_hwp(keyword, output_image, 사전규격명)
 
 
 # 나라장터 페이지로 이동동
@@ -302,8 +311,8 @@ logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
 # 어제 날짜 계산
-# yesterday = datetime.now() - timedelta(days=1)
-# yesterday_str = yesterday.strftime("%Y%m%d")
+yesterday = datetime.now() - timedelta(days=1)
+yesterday_str = yesterday.strftime("%Y%m%d")
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
@@ -317,8 +326,8 @@ logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
-start_date_click.send_keys(20250117)
-logging.info(f"시작일 {20250117} 입력 완료")
+start_date_click.send_keys(yesterday_str)
+logging.info(f"시작일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -333,8 +342,8 @@ logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
-end_date_click.send_keys(20250117)
-logging.info(f"종료일 {20250117} 입력 완료")
+end_date_click.send_keys(yesterday_str)
+logging.info(f"종료일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
@@ -485,14 +494,17 @@ for search_word in search_keywords:
                 time.sleep(2)
 
                 # 파일 열기
-                if latest_file:
+                if latest_file and data:
+                    # 추출한 data에서 사전규격명 가져오기 (파일명에 사용)
+                    사전규격명 = data.get("사전규격명", "N/A")
+
                     logging.info(f"최근 다운로드된 파일: {latest_file}")
                     # handle_file(latest_file)
                     file_extension = latest_file.lower().split('.')[-1]  # 확장자 확인
                     
                     if file_extension == 'hwp':  # HWP 파일인 경우
                         logging.info("한글 파일 처리 시작")
-                        handle_hwp_file(latest_file, file_search_keywords)
+                        handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
                     else:
                         logging.info("한글 파일이 아니므로 다른 파일 처리")
                         handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
