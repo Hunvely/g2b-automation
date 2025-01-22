@@ -118,20 +118,7 @@ def extarct_data(driver):
         logging.error(f"데이터 추출 중 오류 발생: {e}")
         return None
 
-# ZIP 파일을 지정된 폴더로 추출
-def extract_zip(file_path, extract_folder):
-    try:
-        # ZIP 파일 열기
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            # 압축 해제
-            zip_ref.extractall(extract_folder)
-            print(f"ZIP 파일이 {extract_folder}에 성공적으로 압축 해제되었습니다.")
-    except zipfile.BadZipFile:
-        print(f"잘못된 ZIP 파일: {file_path}")
-    except Exception as e:
-        print(f"ZIP 파일 해제 중 오류 발생: {str(e)}")
-
-# 다운로드 폴더에서 가장 최근에 다운로드된 파일을 반환
+# 첨부파일 폴더에서 가장 최근에 다운로드된 파일을 반환
 def get_latest_downloaded_file(download_dir):
     files = os.listdir(download_dir)
     files_with_path = [os.path.join(download_dir, file) for file in files]
@@ -142,6 +129,8 @@ def get_latest_downloaded_file(download_dir):
 def open_file(file_path):
     os.startfile(file_path)
 
+# ============================================== 한글 함수 ==============================================
+
 def close_warning_window_hangle(app):
     windows = app.windows()
     for win in windows:
@@ -151,7 +140,7 @@ def close_warning_window_hangle(app):
             height = rect.bottom - rect.top
             title = win.window_text()
 
-            # 조건: 버전 차이 경고 메세지지
+            # 조건: 버전 차이 경고 메세지
             if width == 201 and height == 241:
                 print(f"경고 창 감지: {title} (크기: {width}x{height})")
                 # 창 위치로 마우스 이동 및 Enter 키 입력
@@ -163,6 +152,19 @@ def close_warning_window_hangle(app):
         except Exception as e:
             print(f"창 탐색 중 오류 발생: {e}")
     return False
+
+# 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_hwp_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    open_file(file_path)
+
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        screenshot_hwp(keyword, 사전규격명)
 
 def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
@@ -227,30 +229,7 @@ def screenshot_hwp(keyword, 사전규격명):
     except Exception as e:
         print(f"한글 파일 처리 중 오류 발생: {e}")
 
-def screenshot_hwpx(keyword, 사전규격명):
-    screenshot_hwp(keyword, 사전규격명) # 한글 처리와 동일 (테스트 예정)
-
-def screenshot_pdf(keyword, 사전규격명):
-    print("PDF")
-
-def screenshot_docx(keyword, 사전규격명):
-    print("DOCX")
-
-def screenshot_xlsx(keyword, 사전규격명):
-    print("EXCEL")
-
-# 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
-def handle_hwp_file(file_path, keywords, 사전규격명):
-    # 파일 존재 여부 확인
-    if not os.path.exists(file_path):
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return
-    
-    open_file(file_path)
-
-    for keyword in keywords:  # 순차적으로 각 키워드 처리
-        # 키워드 검색 후 스크린샷 찍기
-        screenshot_hwp(keyword, 사전규격명)
+# ============================================== hwpx 함수 ==============================================
 
 # 다운로드된 hwpx 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwpx_file(file_path, keywords, 사전규격명):
@@ -265,6 +244,11 @@ def handle_hwpx_file(file_path, keywords, 사전규격명):
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwpx(keyword, 사전규격명)
 
+def screenshot_hwpx(keyword, 사전규격명):
+    screenshot_hwp(keyword, 사전규격명) # 한글 처리와 동일 (테스트 예정)
+
+# ============================================== PDF 함수 ==============================================
+
 # 다운로드된 PDF 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_pdf_file(file_path, keywords, 사전규격명):
     # 파일 존재 여부 확인
@@ -277,6 +261,11 @@ def handle_pdf_file(file_path, keywords, 사전규격명):
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_pdf(keyword, 사전규격명)
+
+def screenshot_pdf(keyword, 사전규격명):
+    print("PDF")
+
+# ============================================== 워드 함수 ==============================================
 
 # 다운로드된 워드 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_docx_file(file_path, keywords, 사전규격명):
@@ -291,6 +280,11 @@ def handle_docx_file(file_path, keywords, 사전규격명):
         # 키워드 검색 후 스크린샷 찍기
         screenshot_docx(keyword, 사전규격명)
 
+def screenshot_docx(keyword, 사전규격명):
+    print("DOCX")
+
+# ============================================== 엑셀 함수 ==============================================
+
 # 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_xlsx_file(file_path, keywords, 사전규격명):
     # 파일 존재 여부 확인
@@ -303,6 +297,11 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_xlsx(keyword, 사전규격명)
+
+def screenshot_xlsx(keyword, 사전규격명):
+    print("EXCEL")
+
+# ============================================== ZIP 함수 ==============================================
 
 # 다운로드된 zip 폴더 압축 해제
 def handle_ZIP(file_path, keywords, 사전규격명):
@@ -319,10 +318,62 @@ def handle_ZIP(file_path, keywords, 사전규격명):
     extract_folder = os.path.join(download_dir, "zip 압축 해제 폴더")
     if not os.path.exists(extract_folder):
         os.makedirs(extract_folder)
+    
+    # ZIP 파일 압축 해제
     extract_zip(file_path, extract_folder)
 
+    # 압축 해제된 파일 확장자별 처리
+    open_extracted_files(extract_folder, keywords, 사전규격명)
 
-# 나라장터 페이지로 이동동
+# ZIP 파일을 지정된 폴더로 추출
+def extract_zip(file_path, extract_folder):
+    try:
+        # ZIP 파일 열기
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            # 압축 해제
+            zip_ref.extractall(extract_folder)
+            print(f"ZIP 파일이 {extract_folder}에 성공적으로 압축 해제되었습니다.")
+    except zipfile.BadZipFile:
+        print(f"잘못된 ZIP 파일: {file_path}")
+    except Exception as e:
+        print(f"ZIP 파일 해제 중 오류 발생: {str(e)}")
+
+def open_extracted_files(extract_folder, keywords, 사전규격명):
+    # 압축 해제된 폴더 내 파일 리스트 가져오기
+    extracted_files = os.listdir(extract_folder)
+    
+    if not extracted_files:
+        print(f"압축 해제된 폴더에 파일이 없습니다: {extract_folder}")
+        return
+    
+    for file_name in extracted_files:
+        file_path = os.path.join(extract_folder, file_name)
+        
+        # 파일 존재 여부 확인
+        if not os.path.isfile(file_path):
+            print(f"디렉토리 내부에 파일이 아닙니다: {file_name}")
+            continue
+        
+        # 파일 확장자 추출
+        file_extension = file_name.lower().split('.')[-1]
+
+        # 파일 확장자별 처리
+        if file_extension == 'hwp':
+            handle_hwp_file(file_path, keywords, 사전규격명)
+        elif file_extension == 'hwpx':
+            handle_hwpx_file(file_path, keywords, 사전규격명)
+        elif file_extension == 'pdf':
+            handle_pdf_file(file_path, keywords, 사전규격명)
+        elif file_extension == 'docx':
+            handle_docx_file(file_path, keywords, 사전규격명)
+        elif file_extension == 'xlsx':
+            handle_xlsx_file(file_path, keywords, 사전규격명)
+        else:
+            print(f"지원되지 않는 파일 형식입니다: {file_name}")
+    
+
+
+# 나라장터 페이지로 이동
 driver.get("https://www.g2b.go.kr")
 logging.info("나라장터 페이지로 이동 완료")
 
@@ -429,7 +480,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['인천', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['정보시스템', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
