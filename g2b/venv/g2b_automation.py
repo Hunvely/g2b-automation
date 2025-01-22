@@ -138,38 +138,9 @@ def get_latest_downloaded_file(download_dir):
     latest_file = max(files_with_path, key=os.path.getmtime)
     return latest_file
 
-# Windows에서 파일을 여는 함수
+# Windows에서 파일을 여는 함수 (공통)
 def open_file(file_path):
     os.startfile(file_path)
-
-# 다운로드된 파일의 확장자에 따라 처리
-def handle_file(file_path):
-    # 파일 존재 여부 확인
-    if not os.path.exists(file_path):
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return
-    
-    file_extension = file_path.lower().split('.')[-1]
-    
-    # 다운로드 중인 .crdownload 파일 무시
-    if file_extension == 'crdownload':
-        print(f"다운로드가 완료되지 않은 파일입니다: {file_path}")
-        return
-
-    if file_extension == 'zip':
-        # ZIP 파일 처리
-        extract_folder = os.path.join(download_dir, "zip 압축 해제 폴더")
-        if not os.path.exists(extract_folder):
-            os.makedirs(extract_folder)
-        extract_zip(file_path, extract_folder)
-
-    elif file_extension == 'hwpx':
-        # HWPX 파일 처리
-        print("HWPX 파일 처리 필요: ", file_path)
-
-    else:
-        # 기타 파일 열기
-        open_file(file_path)
 
 def close_warning_window_hangle(app):
     windows = app.windows()
@@ -193,7 +164,7 @@ def close_warning_window_hangle(app):
             print(f"창 탐색 중 오류 발생: {e}")
     return False
 
-def screenshot_hwp(keyword, output_image, 사전규격명):
+def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
     try:
         app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
@@ -205,7 +176,7 @@ def screenshot_hwp(keyword, output_image, 사전규격명):
         hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
 
         # 한글 로딩
-        time.sleep(3)
+        time.sleep(5)
 
         # 모든 컨트롤 요소들 출력 (child_window)
         hwp_window.print_control_identifiers()
@@ -256,14 +227,99 @@ def screenshot_hwp(keyword, output_image, 사전규격명):
     except Exception as e:
         print(f"한글 파일 처리 중 오류 발생: {e}")
 
+def screenshot_hwpx(keyword, 사전규격명):
+    screenshot_hwp(keyword, 사전규격명) # 한글 처리와 동일 (테스트 예정)
+
+def screenshot_pdf(keyword, 사전규격명):
+    print("PDF")
+
+def screenshot_docx(keyword, 사전규격명):
+    print("DOCX")
+
+def screenshot_xlsx(keyword, 사전규격명):
+    print("EXCEL")
+
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwp_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
-        output_image = os.path.join(screenshot_dir, f"screenshot_{keyword}.png")  # 파일 이름 사업명 + 키워드로 변경 예정
-        screenshot_hwp(keyword, output_image, 사전규격명)
+        screenshot_hwp(keyword, 사전규격명)
+
+# 다운로드된 hwpx 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_hwpx_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    open_file(file_path)
+
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        screenshot_hwpx(keyword, 사전규격명)
+
+# 다운로드된 PDF 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_pdf_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    open_file(file_path)
+
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        screenshot_pdf(keyword, 사전규격명)
+
+# 다운로드된 워드 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_docx_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    open_file(file_path)
+
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        screenshot_docx(keyword, 사전규격명)
+
+# 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
+def handle_xlsx_file(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    open_file(file_path)
+
+    for keyword in keywords:  # 순차적으로 각 키워드 처리
+        # 키워드 검색 후 스크린샷 찍기
+        screenshot_xlsx(keyword, 사전규격명)
+
+# 다운로드된 zip 폴더 압축 해제
+def handle_ZIP(file_path, keywords, 사전규격명):
+    # 파일 존재 여부 확인
+    if not os.path.exists(file_path):
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return
+    
+    # 다운로드 중인 .crdownload 파일 무시
+    if file_extension == 'crdownload':
+        print(f"다운로드가 완료되지 않은 파일입니다: {file_path}")
+        return
+    
+    extract_folder = os.path.join(download_dir, "zip 압축 해제 폴더")
+    if not os.path.exists(extract_folder):
+        os.makedirs(extract_folder)
+    extract_zip(file_path, extract_folder)
 
 
 # 나라장터 페이지로 이동동
@@ -278,8 +334,8 @@ driver.maximize_window()
 
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
-    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013477_close",
-    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013472_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013479_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013478_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013473_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013415_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013414_close",
@@ -373,7 +429,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['정보시스템', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['인천', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
@@ -505,9 +561,21 @@ for search_word in search_keywords:
                     if file_extension == 'hwp':  # HWP 파일인 경우
                         logging.info("한글 파일 처리 시작")
                         handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
-                    else:
-                        logging.info("한글 파일이 아니므로 다른 파일 처리")
-                        handle_file(latest_file)  # 다른 파일 처리, 이후 다른 확장자 처리 예정
+                    elif file_extension == 'hwpx':  # HWPX 파일
+                        logging.info("HWPX 파일 처리 시작")
+                        handle_hwpx_file(latest_file, file_search_keywords, 사전규격명)
+                    elif file_extension == 'pdf':  # PDF 파일
+                        logging.info("PDF 파일 처리 시작")
+                        handle_pdf_file(latest_file, file_search_keywords, 사전규격명)
+                    elif file_extension == 'docx':  # Word 파일
+                        logging.info("Word 파일 (DOCX) 처리 시작")
+                        handle_docx_file(latest_file, file_search_keywords, 사전규격명)
+                    elif file_extension == 'xlsx':  # Excel 파일
+                        logging.info("Excel 파일 (XLSX) 처리 시작")
+                        handle_xlsx_file(latest_file, file_search_keywords, 사전규격명)
+                    elif file_extension == 'zip': # ZIP 폴더
+                        logging.info("ZIP 폴더 처리 시작")
+                        handle_ZIP(latest_file, file_search_keywords, 사전규격명)
                 else:
                     logging.warning("다운로드된 파일이 없습니다.")
 
