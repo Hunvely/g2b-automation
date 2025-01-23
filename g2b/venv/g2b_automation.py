@@ -31,6 +31,9 @@ home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
 # 한글 파일 경로
 hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office 2024\\HOffice130\Bin\\Hwp.exe"
 
+# 워드 파일 경로
+word_path = r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
+
 # 사용자 바탕화면에 있는 "스크린샷" 폴더 경로 설정
 screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
 
@@ -178,7 +181,7 @@ def screenshot_hwp(keyword, 사전규격명):
         hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
 
         # 한글 로딩
-        time.sleep(5)
+        time.sleep(8)
 
         # 모든 컨트롤 요소들 출력 (child_window)
         hwp_window.print_control_identifiers()
@@ -281,8 +284,63 @@ def handle_docx_file(file_path, keywords, 사전규격명):
         screenshot_docx(keyword, 사전규격명)
 
 def screenshot_docx(keyword, 사전규격명):
-    print("DOCX")
+    # 워드 프로그램 자동화
+    try:
+        app = pywinauto.Application().connect(path=word_path) # 워드 프로그램 경로
 
+        word_window = app.window(title_re=".*Word.*")  # 한글 프로그램의 창을 찾기
+
+        # 워드 로딩
+        time.sleep(5)
+
+        # 모든 컨트롤 요소들 출력 (child_window)
+        word_window.print_control_identifiers()
+        
+        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
+        word_window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        logging.info("검색 모달 표시")
+        time.sleep(2)
+
+        word_window.type_keys(keyword)  # 검색어 입력
+        logging.info("검색어 입력")
+        time.sleep(2)
+        
+        # 검색
+        word_window.type_keys("{ENTER}")
+        logging.info("검색 시작")
+
+        # 검색된 텍스트 영역이 활성화되도록 대기
+        time.sleep(2)
+
+        capture_count = 0
+
+        while True:
+            try:
+                # 스크린샷 영역 설정
+                x1, y1 = 100, 200  # 좌측 상단 좌표
+                width, height = 1800, 800
+                x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+
+                # 스크린샷 찍기
+                screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
+                capture_count += 1
+                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot.save(screenshot_file)
+                print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                # 다음 검색 결과로 이동
+                word_window.set_focus()  # 포커스를 해당 영역으로 이동
+                word_window.type_keys("{ENTER}")  # 다음 검색 결과
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
+
+            except Exception as e:
+                print(f"검색 결과 끝 또는 오류: {e}")
+                break
+
+        print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
+
+    except Exception as e:
+        print(f"워드 파일 처리 중 오류 발생: {e}")
 # ============================================== 엑셀 함수 ==============================================
 
 # 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
@@ -315,12 +373,15 @@ def handle_ZIP(file_path, keywords, 사전규격명):
         print(f"다운로드가 완료되지 않은 파일입니다: {file_path}")
         return
     
-    extract_folder = os.path.join(download_dir, "zip 압축 해제 폴더")
+    extract_folder = os.path.join(download_dir, f"{사전규격명} zip 압축 해제 폴더")
     if not os.path.exists(extract_folder):
         os.makedirs(extract_folder)
     
     # ZIP 파일 압축 해제
     extract_zip(file_path, extract_folder)
+
+    # 압축 파일 삭제
+    delete_zip_file(file_path)
 
     # 압축 해제된 파일 확장자별 처리
     open_extracted_files(extract_folder, keywords, 사전규격명)
@@ -338,6 +399,7 @@ def extract_zip(file_path, extract_folder):
     except Exception as e:
         print(f"ZIP 파일 해제 중 오류 발생: {str(e)}")
 
+# 압축 해제된 파일 처리
 def open_extracted_files(extract_folder, keywords, 사전규격명):
     # 압축 해제된 폴더 내 파일 리스트 가져오기
     extracted_files = os.listdir(extract_folder)
@@ -370,7 +432,19 @@ def open_extracted_files(extract_folder, keywords, 사전규격명):
             handle_xlsx_file(file_path, keywords, 사전규격명)
         else:
             print(f"지원되지 않는 파일 형식입니다: {file_name}")
-    
+
+# 원본 ZIP 파일 삭제
+def delete_zip_file(zip_path):
+    try:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+            time.sleep(2)
+            print(f"원본 ZIP 파일이 성공적으로 삭제되었습니다: {zip_path}")
+        else:
+            print(f"삭제하려는 ZIP 파일이 존재하지 않습니다: {zip_path}")
+    except Exception as e:
+        print(f"ZIP 파일 삭제 중 오류 발생: {str(e)}")
+
 
 
 # 나라장터 페이지로 이동
@@ -480,7 +554,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['정보시스템', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['청소년', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
