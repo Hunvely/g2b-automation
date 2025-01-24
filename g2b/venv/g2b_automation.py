@@ -1,5 +1,6 @@
 import sys
 import time
+import psutil
 import logging
 import random
 from bs4 import BeautifulSoup
@@ -33,6 +34,9 @@ hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office 2024\\HOffice130\Bin\\Hwp.
 
 # 워드 파일 경로
 word_path = r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
+
+# PDF 파일일 경로
+acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\\Acrobat.exe"
 
 # 사용자 바탕화면에 있는 "스크린샷" 폴더 경로 설정
 screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
@@ -264,9 +268,77 @@ def handle_pdf_file(file_path, keywords, 사전규격명):
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_pdf(keyword, 사전규격명)
+    
+    # 작업이 끝난 후 Acrobat Reader 닫기
+    close_acrobat_reader()
 
 def screenshot_pdf(keyword, 사전규격명):
-    print("PDF")
+    try:
+        # Adobe Acrobat Reader 연결 (경로 필요 시 명시적으로 설정)
+        app = pywinauto.Application().connect(path=acrobat_path)
+
+        pdf_window = app.window(title_re=".*Adobe Acrobat Reader.*")
+        
+        # PDF 뷰어 로딩 대기
+        time.sleep(7)
+
+        # 키워드 검색 모드 활성화 (Ctrl+F)
+        pdf_window.type_keys("^f")
+        print("검색 모달 표시")
+        time.sleep(2)
+
+        # 키워드 입력
+        pdf_window.type_keys(keyword)
+        print(f"검색어 '{keyword}' 입력")
+        time.sleep(1)
+
+        # 검색 시작 (Enter)
+        pdf_window.type_keys("{ENTER}")
+        print("검색 시작")
+        time.sleep(2)
+
+        # 검색된 텍스트 영역이 활성화되도록 대기
+        time.sleep(2)
+
+        # 스크린샷 캡처
+        capture_count = 0
+        while True:
+            try:
+                # 화면 캡처 영역 (적절히 조정 필요)
+                x1, y1 = 100, 100  # 좌측 상단 좌표
+                width, height = 2000, 800  # 캡처 영역 크기
+                x2, y2 = x1 + width, y1 + height
+
+                # 스크린샷 저장
+                screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
+                capture_count += 1
+                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot.save(screenshot_file)
+                print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                # 다음 검색 결과로 이동 (Enter 키)
+                pdf_window.type_keys("{ENTER}")
+                time.sleep(2)
+
+                # 검색 완료 시 처리 필요
+
+            except Exception as e:
+                print(f"검색 결과 끝 또는 오류: {e}")
+                break  # 루프 종료
+
+        print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
+
+    except Exception as e:
+        print(f"PDF 파일 처리 중 오류 발생: {e}")
+
+def close_acrobat_reader():
+    # Acrobat Reader 프로세스 종료
+    for proc in psutil.process_iter(['pid', 'name']):
+        if 'Acrobat.exe' in proc.info['name']:  # Acrobat Reader 프로세스 이름 확인
+            os.kill(proc.info['pid'], 9)  # 프로세스 강제 종료
+            print("Acrobat Reader가 종료되었습니다.")
+            return
+    print("Acrobat Reader가 실행 중이 아닙니다.")
 
 # ============================================== 워드 함수 ==============================================
 
@@ -459,7 +531,7 @@ driver.maximize_window()
 
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
-    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013479_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013481_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013478_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013473_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013415_close",
@@ -554,10 +626,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['청소년', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['중앙대학교 사범대학 교원 대상 AI 교육콘텐츠 개발 용역', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
-file_search_keywords = ['구축', '레포팅', '리포트', 'Report', '전자문서']
+file_search_keywords = ['개요', '레포팅', '리포트', 'Report', '전자문서']
 
 for search_word in search_keywords:
     
