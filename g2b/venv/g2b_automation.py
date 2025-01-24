@@ -3,7 +3,6 @@ import time
 import psutil
 import logging
 import random
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -33,10 +32,13 @@ home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
 hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office 2024\\HOffice130\Bin\\Hwp.exe"
 
 # 워드 파일 경로
-word_path = r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
+word_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\WINWORD.EXE"
 
 # PDF 파일일 경로
 acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\\Acrobat.exe"
+
+# 엑셀 파일 경로
+excel_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE"
 
 # 사용자 바탕화면에 있는 "스크린샷" 폴더 경로 설정
 screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
@@ -360,7 +362,7 @@ def screenshot_docx(keyword, 사전규격명):
     try:
         app = pywinauto.Application().connect(path=word_path) # 워드 프로그램 경로
 
-        word_window = app.window(title_re=".*Word.*")  # 한글 프로그램의 창을 찾기
+        word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
 
         # 워드 로딩
         time.sleep(5)
@@ -429,7 +431,62 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
         screenshot_xlsx(keyword, 사전규격명)
 
 def screenshot_xlsx(keyword, 사전규격명):
-    print("EXCEL")
+    try:
+        app = pywinauto.Application().connect(path=excel_path) # 엑셀 프로그램 경로
+
+        excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
+
+        # 엑셀 로딩
+        time.sleep(7)
+
+        # 모든 컨트롤 요소들 출력 (child_window)
+        excel_window.print_control_identifiers()
+        
+        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
+        excel_window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        logging.info("검색 모달 표시")
+        time.sleep(2)
+
+        excel_window.type_keys(keyword)  # 검색어 입력
+        logging.info("검색어 입력")
+        time.sleep(2)
+        
+        # 검색
+        excel_window.type_keys("{ENTER}")
+        logging.info("검색 시작")
+
+        # 검색된 텍스트 영역이 활성화되도록 대기
+        time.sleep(2)
+
+        capture_count = 0
+
+        while True:
+            try:
+                # 스크린샷 영역 설정
+                x1, y1 = 100, 200  # 좌측 상단 좌표
+                width, height = 1800, 800
+                x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+
+                # 스크린샷 찍기
+                screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
+                capture_count += 1
+                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot.save(screenshot_file)
+                print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                # 다음 검색 결과로 이동
+                excel_window.set_focus()  # 포커스를 해당 영역으로 이동
+                excel_window.type_keys("{ENTER}")  # 다음 검색 결과
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
+
+            except Exception as e:
+                print(f"검색 결과 끝 또는 오류: {e}")
+                break
+
+        print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
+
+    except Exception as e:
+        print(f"엑셀 파일 처리 중 오류 발생: {e}")
 
 # ============================================== ZIP 함수 ==============================================
 
@@ -626,7 +683,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['중앙대학교 사범대학 교원 대상 AI 교육콘텐츠 개발 용역', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['2025년 법관 및 가사조사관 심층 심리상담 프로그램 위탁운영', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['개요', '레포팅', '리포트', 'Report', '전자문서']
