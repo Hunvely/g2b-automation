@@ -110,8 +110,18 @@ def extarct_data(driver):
     담당자 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']")
     배정예산액 = driver.find_element(By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']")
     의견등록마감일시 = driver.find_element(By.CSS_SELECTOR, "input[title^='시분']")
-
+    # 사전규격 상세정보 필드 확인 및 데이터 추출
     try:
+        상세정보_컨테이너 = driver.find_element(By.ID, "mf_wfm_container_grpUrlInfo")
+        상세정보_링크 = 상세정보_컨테이너.find_element(By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl")
+        # JavaScript URL 대신 텍스트에서 URL 추출
+        if 상세정보_링크.get_attribute('href') == "javascript:void(null);":
+            상세정보_URL = 상세정보_링크.text.strip() or "N/A"
+        else:
+            상세정보_URL = 상세정보_링크.get_attribute('href') or "N/A"
+    except Exception:
+        상세정보_URL = "N/A"
+
         # 데이터 추출
         data = {
             "사전규격등록번호": 사전규격등록번호.get_attribute('value') or "N/A",
@@ -121,6 +131,7 @@ def extarct_data(driver):
             "담당자": 담당자.get_attribute('value') or "N/A",
             "배정예산액": 배정예산액.get_attribute('value') or "N/A",
             "의견등록마감일시": 의견등록마감일시.get_attribute('value') or "N/A",
+            "사전규격상세정보_URL": 상세정보_URL
         }
         return data
     except Exception as e:
@@ -621,8 +632,8 @@ logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
 # 어제 날짜 계산
-yesterday = datetime.now() - timedelta(days=1)
-yesterday_str = yesterday.strftime("%Y%m%d")
+# yesterday = datetime.now() - timedelta(days=1)
+# yesterday_str = yesterday.strftime("%Y%m%d")
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
@@ -636,8 +647,8 @@ logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
-start_date_click.send_keys(yesterday_str)
-logging.info(f"시작일 {yesterday_str} 입력 완료")
+start_date_click.send_keys(20250116)
+logging.info(f"시작일 {20250116} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -652,8 +663,8 @@ logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
-end_date_click.send_keys(yesterday_str)
-logging.info(f"종료일 {yesterday_str} 입력 완료")
+end_date_click.send_keys(20250116)
+logging.info(f"종료일 {20250116} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
@@ -683,7 +694,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['2025년 법관 및 가사조사관 심층 심리상담 프로그램 위탁운영', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['장착용 소화기(연구개발)', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['개요', '레포팅', '리포트', 'Report', '전자문서']
@@ -754,6 +765,15 @@ for search_word in search_keywords:
                     no_file = driver.find_element(By.XPATH, "//*[contains(@id, '_grdFile_noresult')]")
                     time.sleep(1)
                     if no_file.is_displayed():
+                        time.sleep(2)
+                        # 첨부파일은 없지만 사전규격 상세정보 URL이 존재할 때 데이터 추출하기
+                        data = extarct_data(driver)
+                        if data:
+                            logging.info(f"추출된 데이터: {data}")
+                            time.sleep(1)
+                        else:
+                            logging.warning("데이터 추출 실패")
+                            time.sleep(1)
                         logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
                         driver.back()  # 이전 페이지로 이동
                         time.sleep(1)
@@ -769,7 +789,7 @@ for search_word in search_keywords:
                 except Exception as e:
                     logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
 
-                # BeautifulSoup을 이용한 데이터 추출
+                # 데이터 추출
                 data = extarct_data(driver)
                 if data:
                     logging.info(f"추출된 데이터: {data}")
