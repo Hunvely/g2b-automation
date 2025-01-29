@@ -110,18 +110,22 @@ def extarct_data(driver):
     담당자 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']")
     배정예산액 = driver.find_element(By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']")
     의견등록마감일시 = driver.find_element(By.CSS_SELECTOR, "input[title^='시분']")
+
     # 사전규격 상세정보 필드 확인 및 데이터 추출
     try:
         상세정보_컨테이너 = driver.find_element(By.ID, "mf_wfm_container_grpUrlInfo")
         상세정보_링크 = 상세정보_컨테이너.find_element(By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl")
+        상세정보_텍스트 = 상세정보_컨테이너.text.strip() or "N/A"
         # JavaScript URL 대신 텍스트에서 URL 추출
         if 상세정보_링크.get_attribute('href') == "javascript:void(null);":
             상세정보_URL = 상세정보_링크.text.strip() or "N/A"
         else:
             상세정보_URL = 상세정보_링크.get_attribute('href') or "N/A"
     except Exception:
+        상세정보_텍스트 = "N/A"
         상세정보_URL = "N/A"
 
+    try:
         # 데이터 추출
         data = {
             "사전규격등록번호": 사전규격등록번호.get_attribute('value') or "N/A",
@@ -131,7 +135,7 @@ def extarct_data(driver):
             "담당자": 담당자.get_attribute('value') or "N/A",
             "배정예산액": 배정예산액.get_attribute('value') or "N/A",
             "의견등록마감일시": 의견등록마감일시.get_attribute('value') or "N/A",
-            "사전규격상세정보_URL": 상세정보_URL
+            "사전규격상세정보_URL": 상세정보_URL,
         }
         return data
     except Exception as e:
