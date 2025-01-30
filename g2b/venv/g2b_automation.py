@@ -19,6 +19,7 @@ import chromedriver_autoinstaller
 import pyautogui
 import pywinauto
 
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -240,7 +241,6 @@ def screenshot_hwp(keyword, 사전규격명):
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                hwp_window.set_focus()  # 포커스를 해당 영역으로 이동
                 hwp_window.type_keys("{ENTER}")  # 다음 검색 결과
                 time.sleep(2)  # 다음 결과가 로드되도록 대기
 
@@ -248,6 +248,8 @@ def screenshot_hwp(keyword, 사전규격명):
                 print(f"검색 결과 끝 또는 오류: {e}")
                 break
 
+        # ESC 키 한 번 누르기
+        pyautogui.press("esc")
         print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
 
     except Exception as e:
@@ -629,7 +631,7 @@ logging.info("발주목록 소메뉴 클릭")
 time.sleep(5)
 
 # 사전규격공개 옵션 선택
-pre_specification = "#mf_wfm_container_radSrchTy > li.w2radio_item.w2radio_item_1"
+pre_specification = "#mf_wfm_container_radSrchTy_input_1"
 pre_specification_click = driver.find_element(By.CSS_SELECTOR, pre_specification)
 pre_specification_click.click()
 logging.info("검색 유형 사전규격공개 옵션 선택")
@@ -698,7 +700,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['장착용 소화기(연구개발)', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ['정보', '리포트', 'Report', '레포트', '리포팅']
 
 # 파일 내 검색 키워드
 file_search_keywords = ['개요', '레포팅', '리포트', 'Report', '전자문서']
