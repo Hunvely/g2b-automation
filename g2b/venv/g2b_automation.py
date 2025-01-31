@@ -18,10 +18,13 @@ import zipfile
 import chromedriver_autoinstaller
 import pyautogui
 import pywinauto
+import pandas as pd
 
 
 # 로깅 설정
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 chromedriver_autoinstaller.install()
 options = Options()
@@ -55,20 +58,25 @@ print("다운로드 경로:", download_dir)
 
 # ChromeOptions 설정
 options = Options()
-options.add_experimental_option("prefs", {
-    "download.default_directory": download_dir,  # 다운로드 경로
-    "download.prompt_for_download": False,  # 다운로드 시 사용자 확인창 표시하지 않음
-    "download.directory_upgrade": True,  # 기존 경로를 업데이트
-    "safebrowsing.enabled": True  # 안전 브라우징 기능 활성화
-})
+options.add_experimental_option(
+    "prefs",
+    {
+        "download.default_directory": download_dir,  # 다운로드 경로
+        "download.prompt_for_download": False,  # 다운로드 시 사용자 확인창 표시하지 않음
+        "download.directory_upgrade": True,  # 기존 경로를 업데이트
+        "safebrowsing.enabled": True,  # 안전 브라우징 기능 활성화
+    },
+)
 
 # 크롬 창 안 닫히게 유지
 options.add_experimental_option("detach", True)
 
 driver = webdriver.Chrome(options)
 
+
 def random_wait():
     time.sleep(random.uniform(1.5, 4.0))  # 1.5초에서 4초 사이의 랜덤 대기
+
 
 # 팝업 닫기 함수 (조건부 처리 추가)
 def close_popup(css_selector):
@@ -81,6 +89,7 @@ def close_popup(css_selector):
         logging.info(f"팝업 닫음: {css_selector}")
     except TimeoutException:
         logging.info(f"팝업 없음: {css_selector}")
+
 
 def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_time=1):
     target_xpath = "//*[contains(@id, 'wq_uuid_') and contains(@class, 'w2textbox')]"
@@ -100,28 +109,37 @@ def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_ti
     logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {id}")
     return False
 
+
 # 상세규격정보 페이지 데이터 추출
 def extarct_data(driver):
 
     # 각 요소 찾기
-    사전규격등록번호 = driver.find_element(By.CSS_SELECTOR, "input[title^='사전규격등록번호']")
+    사전규격등록번호 = driver.find_element(
+        By.CSS_SELECTOR, "input[title^='사전규격등록번호']"
+    )
     사전규격명 = driver.find_element(By.CSS_SELECTOR, "td[data-title^='사전규격명']")
     수요기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='수요기관']")
     공고기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관']")
-    담당자 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']")
-    배정예산액 = driver.find_element(By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']")
+    담당자 = driver.find_element(
+        By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']"
+    )
+    배정예산액 = driver.find_element(
+        By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']"
+    )
     의견등록마감일시 = driver.find_element(By.CSS_SELECTOR, "input[title^='시분']")
 
     # 사전규격 상세정보 필드 확인 및 데이터 추출
     try:
         상세정보_컨테이너 = driver.find_element(By.ID, "mf_wfm_container_grpUrlInfo")
-        상세정보_링크 = 상세정보_컨테이너.find_element(By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl")
+        상세정보_링크 = 상세정보_컨테이너.find_element(
+            By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl"
+        )
         상세정보_텍스트 = 상세정보_컨테이너.text.strip() or "N/A"
         # JavaScript URL 대신 텍스트에서 URL 추출
-        if 상세정보_링크.get_attribute('href') == "javascript:void(null);":
+        if 상세정보_링크.get_attribute("href") == "javascript:void(null);":
             상세정보_URL = 상세정보_링크.text.strip() or "N/A"
         else:
-            상세정보_URL = 상세정보_링크.get_attribute('href') or "N/A"
+            상세정보_URL = 상세정보_링크.get_attribute("href") or "N/A"
     except Exception:
         상세정보_텍스트 = "N/A"
         상세정보_URL = "N/A"
@@ -129,19 +147,66 @@ def extarct_data(driver):
     try:
         # 데이터 추출
         data = {
-            "사전규격등록번호": 사전규격등록번호.get_attribute('value') or "N/A",
+            "사전규격등록번호": 사전규격등록번호.get_attribute("value") or "N/A",
             "사전규격명": 사전규격명.text or "N/A",
-            "수요기관": 수요기관.get_attribute('value') or "N/A",
-            "공고기관": 공고기관.get_attribute('value') or "N/A",
-            "담당자": 담당자.get_attribute('value') or "N/A",
-            "배정예산액": 배정예산액.get_attribute('value') or "N/A",
-            "의견등록마감일시": 의견등록마감일시.get_attribute('value') or "N/A",
+            "수요기관": 수요기관.get_attribute("value") or "N/A",
+            "공고기관": 공고기관.get_attribute("value") or "N/A",
+            "담당자": 담당자.get_attribute("value") or "N/A",
+            "배정예산액": 배정예산액.get_attribute("value") or "N/A",
+            "의견등록마감일시": 의견등록마감일시.get_attribute("value") or "N/A",
             "사전규격상세정보_URL": 상세정보_URL,
         }
         return data
     except Exception as e:
         logging.error(f"데이터 추출 중 오류 발생: {e}")
         return None
+
+
+def save_to_excel(data):
+    try:
+        # 바탕화면 경로 설정
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+        # 엑셀 파일을 저장할 "엑셀파일" 폴더 경로 설정
+        excel_folder = os.path.join(desktop_path, "엑셀파일")
+
+        # 폴더가 없으면 생성
+        if not os.path.exists(excel_folder):
+            logging.info(f"폴더가 존재하지 않음. 폴더를 생성합니다: {excel_folder}")
+            os.makedirs(excel_folder)
+
+        # 파일 이름 설정
+        file_name = "사전규격상세정보.xlsx"
+
+        # 파일 전체 경로 설정
+        full_path = os.path.join(excel_folder, file_name)
+
+        # 경로 확인 로그 추가
+        logging.info(f"엑셀 파일 경로: {full_path}")
+
+        # 엑셀 시트 이름
+        sheet_name = "데이터"
+
+        df = pd.DataFrame([data])  # 데이터를 DataFrame으로 변환
+
+        # 기존 파일이 존재하는지 확인
+        if os.path.exists(full_path):
+            # 기존 파일이 있으면 'mode=a'로 파일을 열어 데이터를 추가
+            logging.info(f"기존 파일이 존재합니다. 데이터를 추가합니다: {full_path}")
+            with pd.ExcelWriter(
+                full_path, engine="openpyxl", mode="a", if_sheet_exists="overlay"
+            ) as writer:
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
+        else:
+            # 파일이 없으면 'mode=w'로 새 파일을 생성
+            logging.info("새로운 엑셀 파일을 생성합니다.")
+            with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        logging.info(f"데이터가 {full_path} 파일에 추가되었습니다.")
+    except Exception as e:
+        logging.error(f"엑셀 저장 중 오류 발생: {e}")
+
 
 # 첨부파일 폴더에서 가장 최근에 다운로드된 파일을 반환
 def get_latest_downloaded_file(download_dir):
@@ -150,11 +215,14 @@ def get_latest_downloaded_file(download_dir):
     latest_file = max(files_with_path, key=os.path.getmtime)
     return latest_file
 
+
 # Windows에서 파일을 여는 함수 (공통)
 def open_file(file_path):
     os.startfile(file_path)
 
+
 # ============================================== 한글 함수 ==============================================
+
 
 def close_warning_window_hangle(app):
     windows = app.windows()
@@ -178,23 +246,25 @@ def close_warning_window_hangle(app):
             print(f"창 탐색 중 오류 발생: {e}")
     return False
 
+
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwp_file(file_path, keywords, 사전규격명):
     # 파일 존재 여부 확인
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwp(keyword, 사전규격명)
 
+
 def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
     try:
-        app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
+        app = pywinauto.Application().connect(path=hanword_path)  # 한글 프로그램 경로
 
         # 경고 창 닫기
         if close_warning_window_hangle(app):
@@ -207,7 +277,7 @@ def screenshot_hwp(keyword, 사전규격명):
 
         # 모든 컨트롤 요소들 출력 (child_window)
         hwp_window.print_control_identifiers()
-        
+
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         hwp_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
@@ -216,7 +286,7 @@ def screenshot_hwp(keyword, 사전규격명):
         hwp_window.type_keys(keyword)  # 검색어 입력
         logging.info("검색어 입력")
         time.sleep(2)
-        
+
         # 검색
         hwp_window.type_keys("{ENTER}")
         logging.info("검색 시작")
@@ -236,7 +306,9 @@ def screenshot_hwp(keyword, 사전규격명):
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot_file = os.path.join(
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
@@ -255,7 +327,9 @@ def screenshot_hwp(keyword, 사전규격명):
     except Exception as e:
         print(f"한글 파일 처리 중 오류 발생: {e}")
 
+
 # ============================================== hwpx 함수 ==============================================
+
 
 # 다운로드된 hwpx 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwpx_file(file_path, keywords, 사전규격명):
@@ -263,17 +337,20 @@ def handle_hwpx_file(file_path, keywords, 사전규격명):
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwpx(keyword, 사전규격명)
 
+
 def screenshot_hwpx(keyword, 사전규격명):
-    screenshot_hwp(keyword, 사전규격명) # 한글 처리와 동일 (테스트 예정)
+    screenshot_hwp(keyword, 사전규격명)  # 한글 처리와 동일 (테스트 예정)
+
 
 # ============================================== PDF 함수 ==============================================
+
 
 # 다운로드된 PDF 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_pdf_file(file_path, keywords, 사전규격명):
@@ -281,15 +358,16 @@ def handle_pdf_file(file_path, keywords, 사전규격명):
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_pdf(keyword, 사전규격명)
-    
+
     # 작업이 끝난 후 Acrobat Reader 닫기
     close_acrobat_reader()
+
 
 def screenshot_pdf(keyword, 사전규격명):
     try:
@@ -297,7 +375,7 @@ def screenshot_pdf(keyword, 사전규격명):
         app = pywinauto.Application().connect(path=acrobat_path)
 
         pdf_window = app.window(title_re=".*Adobe Acrobat Reader.*")
-        
+
         # PDF 뷰어 로딩 대기
         time.sleep(7)
 
@@ -331,7 +409,9 @@ def screenshot_pdf(keyword, 사전규격명):
                 # 스크린샷 저장
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot_file = os.path.join(
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
@@ -350,16 +430,19 @@ def screenshot_pdf(keyword, 사전규격명):
     except Exception as e:
         print(f"PDF 파일 처리 중 오류 발생: {e}")
 
+
 def close_acrobat_reader():
     # Acrobat Reader 프로세스 종료
-    for proc in psutil.process_iter(['pid', 'name']):
-        if 'Acrobat.exe' in proc.info['name']:  # Acrobat Reader 프로세스 이름 확인
-            os.kill(proc.info['pid'], 9)  # 프로세스 강제 종료
+    for proc in psutil.process_iter(["pid", "name"]):
+        if "Acrobat.exe" in proc.info["name"]:  # Acrobat Reader 프로세스 이름 확인
+            os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
             print("Acrobat Reader가 종료되었습니다.")
             return
     print("Acrobat Reader가 실행 중이 아닙니다.")
 
+
 # ============================================== 워드 함수 ==============================================
+
 
 # 다운로드된 워드 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_docx_file(file_path, keywords, 사전규격명):
@@ -367,17 +450,18 @@ def handle_docx_file(file_path, keywords, 사전규격명):
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_docx(keyword, 사전규격명)
 
+
 def screenshot_docx(keyword, 사전규격명):
     # 워드 프로그램 자동화
     try:
-        app = pywinauto.Application().connect(path=word_path) # 워드 프로그램 경로
+        app = pywinauto.Application().connect(path=word_path)  # 워드 프로그램 경로
 
         word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
 
@@ -386,7 +470,7 @@ def screenshot_docx(keyword, 사전규격명):
 
         # 모든 컨트롤 요소들 출력 (child_window)
         word_window.print_control_identifiers()
-        
+
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         word_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
@@ -395,7 +479,7 @@ def screenshot_docx(keyword, 사전규격명):
         word_window.type_keys(keyword)  # 검색어 입력
         logging.info("검색어 입력")
         time.sleep(2)
-        
+
         # 검색
         word_window.type_keys("{ENTER}")
         logging.info("검색 시작")
@@ -415,7 +499,9 @@ def screenshot_docx(keyword, 사전규격명):
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot_file = os.path.join(
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
@@ -432,7 +518,10 @@ def screenshot_docx(keyword, 사전규격명):
 
     except Exception as e:
         print(f"워드 파일 처리 중 오류 발생: {e}")
+
+
 # ============================================== 엑셀 함수 ==============================================
+
 
 # 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_xlsx_file(file_path, keywords, 사전규격명):
@@ -440,16 +529,17 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_xlsx(keyword, 사전규격명)
 
+
 def screenshot_xlsx(keyword, 사전규격명):
     try:
-        app = pywinauto.Application().connect(path=excel_path) # 엑셀 프로그램 경로
+        app = pywinauto.Application().connect(path=excel_path)  # 엑셀 프로그램 경로
 
         excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
@@ -458,7 +548,7 @@ def screenshot_xlsx(keyword, 사전규격명):
 
         # 모든 컨트롤 요소들 출력 (child_window)
         excel_window.print_control_identifiers()
-        
+
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         excel_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
@@ -467,7 +557,7 @@ def screenshot_xlsx(keyword, 사전규격명):
         excel_window.type_keys(keyword)  # 검색어 입력
         logging.info("검색어 입력")
         time.sleep(2)
-        
+
         # 검색
         excel_window.type_keys("{ENTER}")
         logging.info("검색 시작")
@@ -487,7 +577,9 @@ def screenshot_xlsx(keyword, 사전규격명):
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot_file = os.path.join(
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
@@ -505,7 +597,9 @@ def screenshot_xlsx(keyword, 사전규격명):
     except Exception as e:
         print(f"엑셀 파일 처리 중 오류 발생: {e}")
 
+
 # ============================================== ZIP 함수 ==============================================
+
 
 # 다운로드된 zip 폴더 압축 해제
 def handle_ZIP(file_path, keywords, 사전규격명):
@@ -513,16 +607,16 @@ def handle_ZIP(file_path, keywords, 사전규격명):
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-    
+
     # 다운로드 중인 .crdownload 파일 무시
-    if file_extension == 'crdownload':
+    if file_extension == "crdownload":
         print(f"다운로드가 완료되지 않은 파일입니다: {file_path}")
         return
-    
+
     extract_folder = os.path.join(download_dir, f"{사전규격명} zip 압축 해제 폴더")
     if not os.path.exists(extract_folder):
         os.makedirs(extract_folder)
-    
+
     # ZIP 파일 압축 해제
     extract_zip(file_path, extract_folder)
 
@@ -532,11 +626,12 @@ def handle_ZIP(file_path, keywords, 사전규격명):
     # 압축 해제된 파일 확장자별 처리
     open_extracted_files(extract_folder, keywords, 사전규격명)
 
+
 # ZIP 파일을 지정된 폴더로 추출
 def extract_zip(file_path, extract_folder):
     try:
         # ZIP 파일 열기
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
             # 압축 해제
             zip_ref.extractall(extract_folder)
             print(f"ZIP 파일이 {extract_folder}에 성공적으로 압축 해제되었습니다.")
@@ -545,39 +640,41 @@ def extract_zip(file_path, extract_folder):
     except Exception as e:
         print(f"ZIP 파일 해제 중 오류 발생: {str(e)}")
 
+
 # 압축 해제된 파일 처리
 def open_extracted_files(extract_folder, keywords, 사전규격명):
     # 압축 해제된 폴더 내 파일 리스트 가져오기
     extracted_files = os.listdir(extract_folder)
-    
+
     if not extracted_files:
         print(f"압축 해제된 폴더에 파일이 없습니다: {extract_folder}")
         return
-    
+
     for file_name in extracted_files:
         file_path = os.path.join(extract_folder, file_name)
-        
+
         # 파일 존재 여부 확인
         if not os.path.isfile(file_path):
             print(f"디렉토리 내부에 파일이 아닙니다: {file_name}")
             continue
-        
+
         # 파일 확장자 추출
-        file_extension = file_name.lower().split('.')[-1]
+        file_extension = file_name.lower().split(".")[-1]
 
         # 파일 확장자별 처리
-        if file_extension == 'hwp':
+        if file_extension == "hwp":
             handle_hwp_file(file_path, keywords, 사전규격명)
-        elif file_extension == 'hwpx':
+        elif file_extension == "hwpx":
             handle_hwpx_file(file_path, keywords, 사전규격명)
-        elif file_extension == 'pdf':
+        elif file_extension == "pdf":
             handle_pdf_file(file_path, keywords, 사전규격명)
-        elif file_extension == 'docx':
+        elif file_extension == "docx":
             handle_docx_file(file_path, keywords, 사전규격명)
-        elif file_extension == 'xlsx':
+        elif file_extension == "xlsx":
             handle_xlsx_file(file_path, keywords, 사전규격명)
         else:
             print(f"지원되지 않는 파일 형식입니다: {file_name}")
+
 
 # 원본 ZIP 파일 삭제
 def delete_zip_file(zip_path):
@@ -592,7 +689,6 @@ def delete_zip_file(zip_path):
         print(f"ZIP 파일 삭제 중 오류 발생: {str(e)}")
 
 
-
 # 나라장터 페이지로 이동
 driver.get("https://www.g2b.go.kr")
 logging.info("나라장터 페이지로 이동 완료")
@@ -605,7 +701,7 @@ driver.maximize_window()
 
 # 팝업 닫기 호출 (조건부 처리)
 popups = [
-    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013481_close",
+    "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013489_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013478_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013473_close",
     "#mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB0000013415_close",
@@ -700,13 +796,13 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ['정보', '리포트', 'Report', '레포트', '리포팅']
+search_keywords = ["dfdvrg", "장착용", "울산다운", "레포트", "리포팅"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ['개요', '레포팅', '리포트', 'Report', '전자문서']
+file_search_keywords = ["개요", "레포팅", "리포트", "Report", "전자문서"]
 
 for search_word in search_keywords:
-    
+
     # 사업명 입력
     search_box_click.send_keys(search_word)
     logging.info(f"검색 박스에 {search_word} 입력")
@@ -721,11 +817,12 @@ for search_word in search_keywords:
 
     # 리스트에 항목 있는지 확인 (display none을 확인)
     tbody_id = "mf_wfm_container_gridView1_body_tbody"
+    time.sleep(1)
     rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
     time.sleep(1)
 
     # 검색 결과가 없으면 다음 키워드로 계속
-    if not any(row.value_of_css_property('display') != 'none' for row in rows):
+    if not any(row.value_of_css_property("display") != "none" for row in rows):
         logging.info(f"'{search_word}' 검색 결과가 없습니다. 다음 키워드로 넘어갑니다.")
         time.sleep(1)
         search_box_click.click()
@@ -740,134 +837,157 @@ for search_word in search_keywords:
     while current_index < len(rows):
         row = rows[current_index]
         try:
-            # tr 요소가 화면에 보이는지 확인
-            if row.value_of_css_property('display') != 'none':  # 화면에 표시되는 tr만 처리
+            if "w2grid_hidedRow" in row.get_attribute("class"):
+                logging.info(
+                    f"'{search_word}'의 검색 결과 리스트 탐색을 완료했습니다. 다음 키워드로 넘어갑니다."
+                )
+                break  # 해당 키워드로 검색을 종료하고, 다음 키워드로 넘어감
+            # 각 row에서 링크를 찾기
+            link = row.find_element(By.CSS_SELECTOR, "td a")
 
-                # 각 row에서 링크를 찾기
-                link = row.find_element(By.CSS_SELECTOR, "td a")
-                
-                # 링크가 클릭 가능할 때까지 대기
-                WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
-                
-                # 링크 클릭
-                link.click()
-                logging.info(f"리스트에서 {current_index+1}번째 항목의 상세규격정보 페이지로 이동")
+            # 링크가 클릭 가능할 때까지 대기
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
 
-                # 새 페이지 로드 대기
-                try:
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle"))
+            # 링크 클릭
+            link.click()
+            logging.info(
+                f"리스트에서 {current_index+1}번째 항목의 상세규격정보 페이지로 이동"
+            )
+
+            # 새 페이지 로드 대기
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle")
                     )
-                    logging.info("새 페이지 로드 완료")
-                except TimeoutException:
-                    logging.warning("새 페이지 로드 실패")
-                    current_index += 1
-                    continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
+                )
+                logging.info("새 페이지 로드 완료")
+            except TimeoutException:
+                logging.warning("새 페이지 로드 실패")
+                current_index += 1
+                continue  # 새 페이지 로드가 실패한 경우 다음 항목으로 넘어감
 
-                time.sleep(2)
+            time.sleep(2)
 
-                # 첨부파일 여부 확인
-                try:
-                    no_file = driver.find_element(By.XPATH, "//*[contains(@id, '_grdFile_noresult')]")
-                    time.sleep(1)
-                    if no_file.is_displayed():
-                        time.sleep(2)
-                        # 첨부파일은 없지만 사전규격 상세정보 URL이 존재할 때 데이터 추출하기
-                        data = extarct_data(driver)
-                        if data:
-                            logging.info(f"추출된 데이터: {data}")
-                            time.sleep(1)
-                        else:
-                            logging.warning("데이터 추출 실패")
-                            time.sleep(1)
-                        logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
-                        driver.back()  # 이전 페이지로 이동
+            # 첨부파일 여부 확인
+            try:
+                no_file = driver.find_element(
+                    By.XPATH, "//*[contains(@id, '_grdFile_noresult')]"
+                )
+                time.sleep(1)
+                if no_file.is_displayed():
+                    time.sleep(2)
+                    # 첨부파일은 없지만 사전규격 상세정보 URL이 존재할 때 데이터 추출하기
+                    data = extarct_data(driver)
+                    if data:
+                        logging.info(f"추출된 데이터: {data}")
+                        save_to_excel(data)  # 엑셀 파일에 저장
                         time.sleep(1)
+                    else:
+                        logging.warning("데이터 추출 실패")
+                        time.sleep(1)
+                    logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
+                    driver.back()  # 이전 페이지로 이동
+                    time.sleep(1)
 
-                        # 페이지가 로드된 후 다시 rows 가져오기
-                        WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.ID, "mf_wfm_container_gridView1_body_tbody"))
+                    # 페이지가 로드된 후 다시 rows 가져오기
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located(
+                            (By.ID, "mf_wfm_container_gridView1_body_tbody")
                         )
-                        rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
-                        current_index += 1
-                        time.sleep(1)
-                        continue  # 다음 항목으로 넘어감
-                except Exception as e:
-                    logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
-
-                # 데이터 추출
-                data = extarct_data(driver)
-                if data:
-                    logging.info(f"추출된 데이터: {data}")
+                    )
+                    rows = driver.find_elements(
+                        By.XPATH, f"//*[@id='{tbody_id}']/tr"
+                    )
+                    current_index += 1
                     time.sleep(1)
-                else:
-                    logging.warning("데이터 추출 실패")
-                    time.sleep(1)
+                    continue  # 다음 항목으로 넘어감
+            except Exception as e:
+                logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
 
-                # 스크롤 조건: 첨부파일이 화면에 보일 때까지
-                if scroll_until_element_visible(driver):
-                    logging.info("첨부파일 영역으로 이동")
-                else:
-                    logging.warning("첨부파일을 찾지 못했습니다.")
-
-                # 전체 선택 체크박스 클릭
-                checkbox = driver.find_element(By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']")
-                checkbox.click()
-                logging.info("모든 첨부파일을 선택")
-                time.sleep(2)
-    
-                # 파일 다운로드
-                logging.info("파일 다운로드 시작")
-                download_button = driver.find_element(By.CSS_SELECTOR, "[id*='_btnFileDown']")
+            # 데이터 추출
+            data = extarct_data(driver)
+            if data:
+                logging.info(f"추출된 데이터: {data}")
                 time.sleep(1)
-                download_button.click()
-                logging.info("파일 다운로드 완료")
+            else:
+                logging.warning("데이터 추출 실패")
                 time.sleep(1)
 
-                # 다운로드된 최신 파일 찾기
-                logging.info("다운로드된 파일 찾는 중")
-                latest_file = get_latest_downloaded_file(download_dir)
-                time.sleep(2)
+            # 스크롤 조건: 첨부파일이 화면에 보일 때까지
+            if scroll_until_element_visible(driver):
+                logging.info("첨부파일 영역으로 이동")
+            else:
+                logging.warning("첨부파일을 찾지 못했습니다.")
 
-                # 파일 열기
-                if latest_file and data:
-                    # 추출한 data에서 사전규격명 가져오기 (파일명에 사용)
-                    사전규격명 = data.get("사전규격명", "N/A")
+            # 전체 선택 체크박스 클릭
+            checkbox = driver.find_element(
+                By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']"
+            )
+            checkbox.click()
+            logging.info("모든 첨부파일을 선택")
+            time.sleep(2)
 
-                    logging.info(f"최근 다운로드된 파일: {latest_file}")
-                    # handle_file(latest_file)
-                    file_extension = latest_file.lower().split('.')[-1]  # 확장자 확인
-                    
-                    if file_extension == 'hwp':  # HWP 파일인 경우
-                        logging.info("한글 파일 처리 시작")
-                        handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
-                    elif file_extension == 'hwpx':  # HWPX 파일
-                        logging.info("HWPX 파일 처리 시작")
-                        handle_hwpx_file(latest_file, file_search_keywords, 사전규격명)
-                    elif file_extension == 'pdf':  # PDF 파일
-                        logging.info("PDF 파일 처리 시작")
-                        handle_pdf_file(latest_file, file_search_keywords, 사전규격명)
-                    elif file_extension == 'docx':  # Word 파일
-                        logging.info("Word 파일 (DOCX) 처리 시작")
-                        handle_docx_file(latest_file, file_search_keywords, 사전규격명)
-                    elif file_extension == 'xlsx':  # Excel 파일
-                        logging.info("Excel 파일 (XLSX) 처리 시작")
-                        handle_xlsx_file(latest_file, file_search_keywords, 사전규격명)
-                    elif file_extension == 'zip': # ZIP 폴더
-                        logging.info("ZIP 폴더 처리 시작")
-                        handle_ZIP(latest_file, file_search_keywords, 사전규격명)
-                else:
-                    logging.warning("다운로드된 파일이 없습니다.")
+            # 파일 다운로드
+            logging.info("파일 다운로드 시작")
+            download_button = driver.find_element(
+                By.CSS_SELECTOR, "[id*='_btnFileDown']"
+            )
+            time.sleep(1)
+            download_button.click()
+            logging.info("파일 다운로드 완료")
+            time.sleep(1)
+
+            # 다운로드된 최신 파일 찾기
+            logging.info("다운로드된 파일 찾는 중")
+            latest_file = get_latest_downloaded_file(download_dir)
+            time.sleep(2)
+
+            # 파일 열기
+            if latest_file and data:
+                # 추출한 data에서 사전규격명 가져오기 (파일명에 사용)
+                사전규격명 = data.get("사전규격명", "N/A")
+
+                logging.info(f"최근 다운로드된 파일: {latest_file}")
+                # handle_file(latest_file)
+                file_extension = latest_file.lower().split(".")[-1]  # 확장자 확인
+
+                if file_extension == "hwp":  # HWP 파일인 경우
+                    logging.info("한글 파일 처리 시작")
+                    handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
+                elif file_extension == "hwpx":  # HWPX 파일
+                    logging.info("HWPX 파일 처리 시작")
+                    handle_hwpx_file(latest_file, file_search_keywords, 사전규격명)
+                elif file_extension == "pdf":  # PDF 파일
+                    logging.info("PDF 파일 처리 시작")
+                    handle_pdf_file(latest_file, file_search_keywords, 사전규격명)
+                elif file_extension == "docx":  # Word 파일
+                    logging.info("Word 파일 (DOCX) 처리 시작")
+                    handle_docx_file(latest_file, file_search_keywords, 사전규격명)
+                elif file_extension == "xlsx":  # Excel 파일
+                    logging.info("Excel 파일 (XLSX) 처리 시작")
+                    handle_xlsx_file(latest_file, file_search_keywords, 사전규격명)
+                elif file_extension == "zip":  # ZIP 폴더
+                    logging.info("ZIP 폴더 처리 시작")
+                    handle_ZIP(latest_file, file_search_keywords, 사전규격명)
+            else:
+                logging.warning("다운로드된 파일이 없습니다.")
 
         except StaleElementReferenceException:
             logging.warning("Stale element encountered. 현재 row를 건너뜁니다.")
             current_index += 1  # Stale element가 발생하면 건너뛰고 계속 진행
         except Exception as e:
             logging.error(f"예상치 못한 오류 발생: {e}")
-            current_index += 1  # 오류가 발생하면 해당 항목을 건너뛰고 다음 항목으로 넘어감
-                
+            current_index += (
+                1  # 오류가 발생하면 해당 항목을 건너뛰고 다음 항목으로 넘어감
+            )
+    # 검색어 입력 박스를 다시 찾기 (페이지가 갱신될 수 있음)
+    search_box_click = driver.find_element(By.CSS_SELECTOR, search_box)
+    time.sleep(1)
+    search_box_click.clear()
+    time.sleep(1)
+
 
 # 모든 검색 키워드를 처리한 후 종료
 logging.info("모든 검색이 완료되었습니다. 프로그램을 종료합니다.")
 sys.exit()
-
