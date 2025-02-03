@@ -18,7 +18,9 @@ import zipfile
 import chromedriver_autoinstaller
 import pyautogui
 import pywinauto
+import win32com.client
 import pandas as pd
+from openpyxl import load_workbook
 
 
 # 로깅 설정
@@ -32,8 +34,11 @@ options = Options()
 # 사용자 홈 디렉토리 가져오기
 home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
 
-# 한글 파일 경로
-hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office 2024\\HOffice130\Bin\\Hwp.exe"
+# 한글 파일 경로 (2010 버전)
+hanword_path = r"C:\\Program Files (x86)\\Hnc\\Hwp80\\Hwp.exe"
+
+# 한컴오피스 한글 COM 객체 생성
+hwp = win32com.client.Dispatch("HWPFrame.HwpObject")
 
 # 워드 파일 경로
 word_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\WINWORD.EXE"
@@ -196,6 +201,31 @@ def save_to_excel(data):
             with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
                 df.to_excel(writer, index=False, sheet_name=sheet_name)
 
+        # 엑셀 파일 열기 (openpyxl로 셀 크기 조정)
+        wb = load_workbook(full_path)
+        sheet = wb[sheet_name]
+
+        # 셀 크기 자동 조정 코드 개선
+        for col in sheet.columns:
+            max_length = 0
+            column = col[0].column_letter  # 열의 알파벳(A, B, C 등)
+
+            for cell in col:
+                try:
+                    if cell.value:
+                        # 한글과 영어 너비 차이 보정
+                        text = str(cell.value)
+                        text_length = sum(2 if ord(char) > 127 else 1 for char in text)  # 한글이면 2, 영어는 1로 계산
+                        max_length = max(max_length, text_length)
+                except:
+                    pass
+
+            adjusted_width = (max_length * 1.2)  # 한글 보정 계수 적용
+            sheet.column_dimensions[column].width = adjusted_width
+
+        # 파일 저장
+        wb.save(full_path)
+
         logging.info(f"데이터가 {full_path} 파일에 추가되었습니다.")
     except Exception as e:
         logging.error(f"엑셀 저장 중 오류 발생: {e}")
@@ -218,27 +248,47 @@ def open_file(file_path):
 
 
 def close_warning_window_hangle(app):
-    windows = app.windows()
-    for win in windows:
-        try:
-            rect = win.rectangle()
-            width = rect.right - rect.left
-            height = rect.bottom - rect.top
-            title = win.window_text()
+    if not app:
+        print("한글 프로그램 객체가 올바르게 생성되지 않았습니다.")
+        return False
+    
+    try:
+        windows = app.windows()
+        for win in windows:
+            try:
+                rect = win.rectangle()
+                width = rect.right - rect.left
+                height = rect.bottom - rect.top
+                title = win.window_text()
 
-            # 조건: 버전 차이 경고 메세지
-            if width == 201 and height == 241:
-                print(f"경고 창 감지: {title} (크기: {width}x{height})")
-                # 창 위치로 마우스 이동 및 Enter 키 입력
-                x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
-                pyautogui.click(x, y)
-                pyautogui.press("enter")
-                time.sleep(1)
-                return True
-        except Exception as e:
-            print(f"창 탐색 중 오류 발생: {e}")
-    return False
+                # 조건: 버전 차이 경고 메세지
+                if width == 201 and height == 241:
+                    print(f"경고 창 감지: {title} (크기: {width}x{height})")
+                    # 창 위치로 마우스 이동 및 Enter 키 입력
+                    x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
+                    pyautogui.click(x, y)
+                    pyautogui.press("enter")
+                    time.sleep(1)
+                    return True
+            except Exception as e:
+                print(f"창 탐색 중 오류 발생: {e}")
+        return False
+    except Exception as e:
+        print(f"경고 창을 닫는 중 오류 발생: {e}")
+        return False
 
+def open_hwp_file(file_path):
+    try:
+        # 한컴오피스 한글 COM 객체 생성
+        hwp = win32com.client.Dispatch("HWPFrame.HwpObject")
+
+        # 한글 파일 열기
+        hwp.XHwpWindows.Item(0).Visible = True  # 첫 번째 창을 표시
+        hwp.HwpOpen(file_path)  # 파일 경로로 한글 파일 열기
+        print(f"{file_path} 파일이 성공적으로 열렸습니다.")
+        return hwp
+    except Exception as e:
+        print(f"파일을 여는 중 오류 발생: {e}")
 
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwp_file(file_path, keywords, 사전규격명):
@@ -247,49 +297,42 @@ def handle_hwp_file(file_path, keywords, 사전규격명):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
 
-    open_file(file_path)
+    # 한글 파일 열기
+    hwp = open_hwp_file(file_path)
+    if not hwp:
+        print("한글 파일 열기 실패.")
+        return
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwp(keyword, 사전규격명)
+    
+    hwp.Quit()
 
 
 def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
     try:
-        app = pywinauto.Application().connect(path=hanword_path)  # 한글 프로그램 경로
+        
 
-        # 경고 창 닫기
-        if close_warning_window_hangle(app):
-            print("경고 메시지가 닫혔습니다.")
+        # # 경고 창 닫기
+        # close_warning_window_hangle(hwp)
 
-        hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+        # 검색 기능 실행
+        hwp.HAction.Run("Find")
+        time.sleep(1)
 
-        # 한글 로딩
-        time.sleep(8)
-
-        # 모든 컨트롤 요소들 출력 (child_window)
-        hwp_window.print_control_identifiers()
-
-        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
-        hwp_window.type_keys("^f")  # Ctrl+F (검색 단축키)
-        logging.info("검색 모달 표시")
-        time.sleep(2)
-
-        hwp_window.type_keys(keyword)  # 검색어 입력
-        logging.info("검색어 입력")
-        time.sleep(2)
-
-        # 검색
-        hwp_window.type_keys("{ENTER}")
-        logging.info("검색 시작")
+        # 검색어 입력
+        hwp.FindCtrlSet.HSet("FindString", keyword)  # 검색어 설정
+        hwp.FindCtrlSet.HSet("IgnoreMessage", 1)  # 메시지 무시 (찾을 수 없음 방지)
+        hwp.HAction.Run("FindNext")  # 검색 실행
 
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
 
         capture_count = 0
 
-        while True:
+        while hwp.FindCtrlSet.HSet("Result") == 1:
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
@@ -306,7 +349,7 @@ def screenshot_hwp(keyword, 사전규격명):
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                hwp_window.type_keys("{ENTER}")  # 다음 검색 결과
+                hwp.HAction.Run("FindNext")
                 time.sleep(2)  # 다음 결과가 로드되도록 대기
 
             except Exception as e:
@@ -727,8 +770,8 @@ logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
 # 어제 날짜 계산
-# yesterday = datetime.now() - timedelta(days=1)
-# yesterday_str = yesterday.strftime("%Y%m%d")
+yesterday = datetime.now() - timedelta(days=1)
+yesterday_str = yesterday.strftime("%Y%m%d")
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
@@ -743,7 +786,7 @@ time.sleep(1)
 
 # 진행일자 시작일 입력
 start_date_click.send_keys(20250116)
-logging.info(f"시작일 {20250116} 입력 완료")
+logging.info(f"시작일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -759,7 +802,7 @@ time.sleep(1)
 
 # 진행일자 종료일 입력
 end_date_click.send_keys(20250116)
-logging.info(f"종료일 {20250116} 입력 완료")
+logging.info(f"종료일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
@@ -965,6 +1008,28 @@ for search_word in search_keywords:
                     handle_ZIP(latest_file, file_search_keywords, 사전규격명)
             else:
                 logging.warning("다운로드된 파일이 없습니다.")
+
+            # 파일 처리 후 이전 페이지로 돌아가기
+            driver.back()
+            time.sleep(1)
+
+            # 페이지가 로드된 후 다시 rows 가져오기
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "mf_wfm_container_gridView1_body_tbody"))
+            )
+            rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+            time.sleep(1)
+
+            # 다음 항목 처리를 위해 current_index 증가
+            current_index += 1
+
+            # 다음 row가 있는지 확인 후 처리
+            if current_index < len(rows):
+                time.sleep(1)
+                continue  # 다음 항목 처리
+            else:
+                time.sleep(1)
+                break  # 다음 키워드로 이동
 
         except StaleElementReferenceException:
             logging.warning("Stale element encountered. 현재 row를 건너뜁니다.")
