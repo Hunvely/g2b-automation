@@ -916,12 +916,18 @@ for search_word in search_keywords:
                     # 첨부파일은 없지만 사전규격 상세정보 URL이 존재할 때 데이터 추출하기
                     data = extract_data(driver)
                     if data:
-                        logging.info(f"추출된 데이터: {data}")
-                        save_to_excel(data)  # 엑셀 파일에 저장
-                        time.sleep(1)
+                        # 사전규격상세정보_URL이 'N/A'가 아닌 경우에만 엑셀에 저장
+                        if data["사전규격상세정보_URL"] != "N/A":
+                            logging.info(f"추출된 데이터: {data}")
+                            save_to_excel(data)  # 엑셀 파일에 저장
+                            time.sleep(1)
+                        else:
+                            logging.warning("사전규격상세정보 URL이 존재하지 않습니다.")
+                            time.sleep(1)
                     else:
                         logging.warning("데이터 추출 실패")
                         time.sleep(1)
+
                     logging.info("첨부파일이 없습니다. 이전 페이지로 이동합니다.")
                     driver.back()  # 이전 페이지로 이동
                     time.sleep(1)
