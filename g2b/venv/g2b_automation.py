@@ -111,7 +111,7 @@ def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_ti
 
 
 # 상세규격정보 페이지 데이터 추출
-def extarct_data(driver):
+def extract_data(driver):
 
     # 각 요소 찾기
     사전규격등록번호 = driver.find_element(
@@ -164,41 +164,34 @@ def extarct_data(driver):
 
 def save_to_excel(data):
     try:
-        # 바탕화면 경로 설정
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-
-        # 엑셀 파일을 저장할 "엑셀파일" 폴더 경로 설정
         excel_folder = os.path.join(desktop_path, "엑셀파일")
 
-        # 폴더가 없으면 생성
         if not os.path.exists(excel_folder):
             logging.info(f"폴더가 존재하지 않음. 폴더를 생성합니다: {excel_folder}")
             os.makedirs(excel_folder)
 
-        # 파일 이름 설정
         file_name = "사전규격상세정보.xlsx"
-
-        # 파일 전체 경로 설정
         full_path = os.path.join(excel_folder, file_name)
 
-        # 경로 확인 로그 추가
         logging.info(f"엑셀 파일 경로: {full_path}")
 
-        # 엑셀 시트 이름
         sheet_name = "데이터"
+        df = pd.DataFrame([data])  
 
-        df = pd.DataFrame([data])  # 데이터를 DataFrame으로 변환
-
-        # 기존 파일이 존재하는지 확인
         if os.path.exists(full_path):
-            # 기존 파일이 있으면 'mode=a'로 파일을 열어 데이터를 추가
             logging.info(f"기존 파일이 존재합니다. 데이터를 추가합니다: {full_path}")
-            with pd.ExcelWriter(
-                full_path, engine="openpyxl", mode="a", if_sheet_exists="overlay"
-            ) as writer:
-                df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+            # 기존 데이터 불러오기
+            existing_df = pd.read_excel(full_path, sheet_name=sheet_name, engine="openpyxl")
+
+            # 새로운 데이터를 기존 데이터와 합치기
+            combined_df = pd.concat([existing_df, df], ignore_index=True)
+
+            # 합친 데이터를 다시 저장
+            with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
+                combined_df.to_excel(writer, index=False, sheet_name=sheet_name)
         else:
-            # 파일이 없으면 'mode=w'로 새 파일을 생성
             logging.info("새로운 엑셀 파일을 생성합니다.")
             with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
                 df.to_excel(writer, index=False, sheet_name=sheet_name)
@@ -878,7 +871,7 @@ for search_word in search_keywords:
                 if no_file.is_displayed():
                     time.sleep(2)
                     # 첨부파일은 없지만 사전규격 상세정보 URL이 존재할 때 데이터 추출하기
-                    data = extarct_data(driver)
+                    data = extract_data(driver)
                     if data:
                         logging.info(f"추출된 데이터: {data}")
                         save_to_excel(data)  # 엑셀 파일에 저장
@@ -906,7 +899,7 @@ for search_word in search_keywords:
                 logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
 
             # 데이터 추출
-            data = extarct_data(driver)
+            data = extract_data(driver)
             if data:
                 logging.info(f"추출된 데이터: {data}")
                 time.sleep(1)
