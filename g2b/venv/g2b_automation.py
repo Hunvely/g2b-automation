@@ -832,7 +832,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["dfdvrg", "장착용", "울산다운", "레포트", "리포팅"]
+search_keywords = ["dfdvrg", "장착용", "울산다운", "시스템", "리포팅"]
 
 # 파일 내 검색 키워드
 file_search_keywords = ["개요", "레포팅", "리포트", "Report", "전자문서"]
@@ -1028,8 +1028,34 @@ for search_word in search_keywords:
                 time.sleep(1)
                 continue  # 다음 항목 처리
             else:
-                time.sleep(1)
-                break  # 다음 키워드로 이동
+                try:
+                    # 현재 선택된 페이지 확인
+                    current_page = driver.find_element(By.CLASS_NAME, "w2pageList_label_selected")
+                    current_page_number = int(current_page.text)
+
+                    # 다음 페이지 버튼 찾기
+                    next_page_number = current_page_number + 1
+                    try:
+                        next_page_button = driver.find_element(By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")
+                    except:
+                        logging.info("다음 페이지 없음. 모든 검색 완료.")
+                        break  # 더 이상 페이지가 없으면 종료
+
+                    # 다음 페이지로 이동
+                    next_page_button.click()
+                    logging.info(f"{next_page_number} 페이지로 이동 중...")
+                    time.sleep(2)
+
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, tbody_id))
+                    )
+
+                    rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+                    current_index = 0
+
+                except Exception as e:
+                    logging.warning(f"페이지 이동 실패: {e}")
+                    break
 
         except StaleElementReferenceException:
             logging.warning("Stale element encountered. 현재 row를 건너뜁니다.")
