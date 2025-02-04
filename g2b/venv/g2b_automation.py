@@ -244,31 +244,31 @@ def open_file(file_path):
 # ============================================== 한글 함수 ==============================================
 
 
-def close_warning_window_hangle(app):
-    try:
-        windows = app.windows()
-        for win in windows:
-            try:
-                rect = win.rectangle()
-                width = rect.right - rect.left
-                height = rect.bottom - rect.top
-                title = win.window_text()
+# def close_warning_window_hangle(app):
+#     try:
+#         windows = app.windows()
+#         for win in windows:
+#             try:
+#                 rect = win.rectangle()
+#                 width = rect.right - rect.left
+#                 height = rect.bottom - rect.top
+#                 title = win.window_text()
 
-                # 조건: 버전 차이 경고 메세지
-                if width == 201 and height == 241:
-                    print(f"경고 창 감지: {title} (크기: {width}x{height})")
-                    # 창 위치로 마우스 이동 및 Enter 키 입력
-                    x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
-                    pyautogui.click(x, y)
-                    pyautogui.press("enter")
-                    time.sleep(1)
-                    return True
-            except Exception as e:
-                print(f"창 탐색 중 오류 발생: {e}")
-        return False
-    except Exception as e:
-        print(f"경고 창을 닫는 중 오류 발생: {e}")
-        return False
+#                 # 조건: 버전 차이 경고 메세지
+#                 if width == 201 and height == 241:
+#                     print(f"경고 창 감지: {title} (크기: {width}x{height})")
+#                     # 창 위치로 마우스 이동 및 Enter 키 입력
+#                     x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
+#                     pyautogui.click(x, y)
+#                     pyautogui.press("enter")
+#                     time.sleep(1)
+#                     return True
+#             except Exception as e:
+#                 print(f"창 탐색 중 오류 발생: {e}")
+#         return False
+#     except Exception as e:
+#         print(f"경고 창을 닫는 중 오류 발생: {e}")
+#         return False
     
 def close_hwp_file():
     # 한글 프로세스 종료
@@ -295,20 +295,20 @@ def handle_hwp_file(file_path, keywords, 사전규격명):
 
     close_hwp_file()
 
-# def close_search_end_window(app):
-#     try:
-#         alert_windows = app.windows()
-#         for alert in alert_windows:
-#             # '문서의 끝까지 찾았습니다' 텍스트가 정확히 포함된 창을 찾음
-#             if alert.window_text() and "문서의 끝까지 찾았습니다" in alert.window_text():
-#                 print("검색 종료 창 감지. 검색을 종료합니다.")
-#                 alert.set_focus()  # 창을 선택하고
-#                 pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
-#                 return True  # 창을 찾았다면 True 반환
-#         return False  # 해당 창을 찾지 못했다면 False 반환
-#     except Exception as e:
-#         print(f"검색 종료 창 감지 중 오류 발생: {e}")
-#         return False
+def close_warning_window_hangle(app):
+    try:
+        alert_windows = app.windows()
+        for alert in alert_windows:
+            # '문서의 끝까지 찾았습니다' 텍스트가 정확히 포함된 창을 찾음
+            if alert.window_text() and "문서의 끝까지 찾았습니다" in alert.window_text():
+                print("검색 종료 창 감지. 검색을 종료합니다.")
+                alert.set_focus()  # 창을 선택하고
+                pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+                return True  # 창을 찾았다면 True 반환
+        return False  # 해당 창을 찾지 못했다면 False 반환
+    except Exception as e:
+        print(f"검색 종료 창 감지 중 오류 발생: {e}")
+        return False
 
 def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
@@ -319,9 +319,12 @@ def screenshot_hwp(keyword, 사전규격명):
         time.sleep(5)
 
         # 경고 창 닫기
-        if close_warning_window_hangle(app):
-            print("경고 메시지가 닫혔습니다.")
-            time.sleep(2)
+        # if close_warning_window_hangle(app):
+        #     print("경고 메시지가 닫혔습니다.")
+        #     time.sleep(2)
+
+        pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+        time.sleep(2)
 
         hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
 
@@ -331,7 +334,7 @@ def screenshot_hwp(keyword, 사전규격명):
         time.sleep(1)
 
         # 모든 컨트롤 요소들 출력 (child_window)
-        hwp_window.print_control_identifiers()
+        # hwp_window.print_control_identifiers()
         
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         hwp_window.type_keys("^f")  # Ctrl+F (검색 단축키)
@@ -340,7 +343,7 @@ def screenshot_hwp(keyword, 사전규격명):
 
         # 한글 메인 편집창 찾기
         hwp_edit = app.window(title_re=".*찾기.*")
-        hwp_edit.print_control_identifiers()
+        # hwp_edit.print_control_identifiers()
 
         if not hwp_edit:
             print("한글 편집창을 찾을 수 없습니다.")
@@ -365,9 +368,9 @@ def screenshot_hwp(keyword, 사전규격명):
         while True:
 
             # hwp_edit_complete 창 확인 (모든 검색 완료 후 종료)
-            hwp_edit_complete = app.window(title_re=".*한글.*")
+            hwp_edit_complete = app.window(title_re="한글")
             if hwp_edit_complete.exists():
-                print("한글 창 발견: 모든 키워드 검색을 마쳤습니다.")
+                print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
                 pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
                 return True  # 모든 검색 종료
 
@@ -387,7 +390,7 @@ def screenshot_hwp(keyword, 사전규격명):
                 # "다음 찾기" 버튼 클릭
                 hwp_edit.type_keys("{ENTER}")
                 time.sleep(2)  # 다음 검색 결과가 로드될 시간 대기
-                hwp_edit.print_control_identifiers()
+                # hwp_edit.print_control_identifiers()
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
@@ -872,7 +875,7 @@ time.sleep(1)
 search_keywords = ["dfdvrg", "시스템", "울산다운", "정보", "리포팅"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["전자문서", "체계", "리포트", "Report", "전자문서"]
+file_search_keywords = ["정보", "시스템", "리포트", "Report", "전자문서"]
 
 for search_word in search_keywords:
 
