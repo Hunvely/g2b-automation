@@ -34,11 +34,8 @@ options = Options()
 # 사용자 홈 디렉토리 가져오기
 home_dir = os.path.expanduser("~")  # Windows, macOS, Linux 모두 지원
 
-# 한글 파일 경로 (2010 버전)
-hanword_path = r"C:\\Program Files (x86)\\Hnc\\Hwp80\\Hwp.exe"
-
-# 한컴오피스 한글 COM 객체 생성
-hwp = win32com.client.Dispatch("HWPFrame.HwpObject")
+# 한글 파일 경로 (Neo 버전)
+hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office NEO\\HOffice96\\Bin\\Hwp.exe"
 
 # 워드 파일 경로
 word_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\WINWORD.EXE"
@@ -248,10 +245,6 @@ def open_file(file_path):
 
 
 def close_warning_window_hangle(app):
-    if not app:
-        print("한글 프로그램 객체가 올바르게 생성되지 않았습니다.")
-        return False
-    
     try:
         windows = app.windows()
         for win in windows:
@@ -276,63 +269,108 @@ def close_warning_window_hangle(app):
     except Exception as e:
         print(f"경고 창을 닫는 중 오류 발생: {e}")
         return False
-
-def open_hwp_file(file_path):
-    try:
-        # 한컴오피스 한글 COM 객체 생성
-        hwp = win32com.client.Dispatch("HWPFrame.HwpObject")
-
-        # 한글 파일 열기
-        hwp.XHwpWindows.Item(0).Visible = True  # 첫 번째 창을 표시
-        hwp.HwpOpen(file_path)  # 파일 경로로 한글 파일 열기
-        print(f"{file_path} 파일이 성공적으로 열렸습니다.")
-        return hwp
-    except Exception as e:
-        print(f"파일을 여는 중 오류 발생: {e}")
+    
+def close_hwp_file():
+    # 한글 프로세스 종료
+    for proc in psutil.process_iter(["pid", "name"]):
+        if "Hwp.exe" in proc.info["name"]:  # Hwp 프로세스 이름 확인
+            os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
+            print("Hwp가 종료되었습니다.")
+            return
+    print("Hwp가 실행 중이 아닙니다.")
 
 # 다운로드된 한글 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_hwp_file(file_path, keywords, 사전규격명):
+
     # 파일 존재 여부 확인
     if not os.path.exists(file_path):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
-
-    # 한글 파일 열기
-    hwp = open_hwp_file(file_path)
-    if not hwp:
-        print("한글 파일 열기 실패.")
-        return
+    
+    open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwp(keyword, 사전규격명)
-    
-    hwp.Quit()
 
+    close_hwp_file()
+
+# def close_search_end_window(app):
+#     try:
+#         alert_windows = app.windows()
+#         for alert in alert_windows:
+#             # '문서의 끝까지 찾았습니다' 텍스트가 정확히 포함된 창을 찾음
+#             if alert.window_text() and "문서의 끝까지 찾았습니다" in alert.window_text():
+#                 print("검색 종료 창 감지. 검색을 종료합니다.")
+#                 alert.set_focus()  # 창을 선택하고
+#                 pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+#                 return True  # 창을 찾았다면 True 반환
+#         return False  # 해당 창을 찾지 못했다면 False 반환
+#     except Exception as e:
+#         print(f"검색 종료 창 감지 중 오류 발생: {e}")
+#         return False
 
 def screenshot_hwp(keyword, 사전규격명):
     # 한글 프로그램 자동화
     try:
-        
+        app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
 
-        # # 경고 창 닫기
-        # close_warning_window_hangle(hwp)
+        # 한글 로딩
+        time.sleep(5)
 
-        # 검색 기능 실행
-        hwp.HAction.Run("Find")
+        # 경고 창 닫기
+        if close_warning_window_hangle(app):
+            print("경고 메시지가 닫혔습니다.")
+            time.sleep(2)
+
+        hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+
+        # 문서의 맨 위로 이동 (Ctrl + Page Up)
+        hwp_window.type_keys("^({PGUP})")
+        logging.info("문서 맨 위로 이동")
         time.sleep(1)
 
-        # 검색어 입력
-        hwp.FindCtrlSet.HSet("FindString", keyword)  # 검색어 설정
-        hwp.FindCtrlSet.HSet("IgnoreMessage", 1)  # 메시지 무시 (찾을 수 없음 방지)
-        hwp.HAction.Run("FindNext")  # 검색 실행
+        # 모든 컨트롤 요소들 출력 (child_window)
+        hwp_window.print_control_identifiers()
+        
+        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
+        hwp_window.type_keys("^f")  # Ctrl+F (검색 단축키)
+        logging.info("검색 모달 표시")
+        time.sleep(2)
+
+        # 한글 메인 편집창 찾기
+        hwp_edit = app.window(title_re=".*찾기.*")
+        hwp_edit.print_control_identifiers()
+
+        if not hwp_edit:
+            print("한글 편집창을 찾을 수 없습니다.")
+            return
+
+        # 포커스를 주고 키워드 입력
+        hwp_edit.set_focus()
+        time.sleep(1)
+        hwp_edit.type_keys(keyword, with_spaces=True, pause=0.1)
+        logging.info(f"검색어 입력: {keyword}")
+        time.sleep(1)
+
+        # 엔터 키 입력 (검색 실행)
+        hwp_edit.type_keys("{ENTER}")
+        logging.info("검색 실행")
 
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
 
         capture_count = 0
 
-        while hwp.FindCtrlSet.HSet("Result") == 1:
+        while True:
+
+            # hwp_edit_complete 창 확인 (모든 검색 완료 후 종료)
+            hwp_edit_complete = app.window(title_re=".*한글.*")
+            if hwp_edit_complete.exists():
+                print("한글 창 발견: 모든 키워드 검색을 마쳤습니다.")
+                pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+                return True  # 모든 검색 종료
+
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
@@ -342,15 +380,14 @@ def screenshot_hwp(keyword, 사전규격명):
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(
-                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
-                )
+                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
-                # 다음 검색 결과로 이동
-                hwp.HAction.Run("FindNext")
-                time.sleep(2)  # 다음 결과가 로드되도록 대기
+                # "다음 찾기" 버튼 클릭
+                hwp_edit.type_keys("{ENTER}")
+                time.sleep(2)  # 다음 검색 결과가 로드될 시간 대기
+                hwp_edit.print_control_identifiers()
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
@@ -785,7 +822,7 @@ logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
-start_date_click.send_keys(20250116)
+start_date_click.send_keys(yesterday_str)
 logging.info(f"시작일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
@@ -801,7 +838,7 @@ logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
-end_date_click.send_keys(20250116)
+end_date_click.send_keys(yesterday_str)
 logging.info(f"종료일 {yesterday_str} 입력 완료")
 time.sleep(1)
 
@@ -832,10 +869,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["dfdvrg", "장착용", "울산다운", "시스템", "리포팅"]
+search_keywords = ["dfdvrg", "시스템", "울산다운", "정보", "리포팅"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["개요", "레포팅", "리포트", "Report", "전자문서"]
+file_search_keywords = ["전자문서", "체계", "리포트", "Report", "전자문서"]
 
 for search_word in search_keywords:
 
