@@ -242,33 +242,6 @@ def open_file(file_path):
 
 
 # ============================================== 한글 함수 ==============================================
-
-
-# def close_warning_window_hangle(app):
-#     try:
-#         windows = app.windows()
-#         for win in windows:
-#             try:
-#                 rect = win.rectangle()
-#                 width = rect.right - rect.left
-#                 height = rect.bottom - rect.top
-#                 title = win.window_text()
-
-#                 # 조건: 버전 차이 경고 메세지
-#                 if width == 201 and height == 241:
-#                     print(f"경고 창 감지: {title} (크기: {width}x{height})")
-#                     # 창 위치로 마우스 이동 및 Enter 키 입력
-#                     x, y = rect.left + 10, rect.top + 10  # 창 내부로 마우스 이동
-#                     pyautogui.click(x, y)
-#                     pyautogui.press("enter")
-#                     time.sleep(1)
-#                     return True
-#             except Exception as e:
-#                 print(f"창 탐색 중 오류 발생: {e}")
-#         return False
-#     except Exception as e:
-#         print(f"경고 창을 닫는 중 오류 발생: {e}")
-#         return False
     
 def close_hwp_file():
     # 한글 프로세스 종료
@@ -420,9 +393,10 @@ def handle_hwpx_file(file_path, keywords, 사전규격명):
         # 키워드 검색 후 스크린샷 찍기
         screenshot_hwpx(keyword, 사전규격명)
 
+    close_hwp_file()
 
 def screenshot_hwpx(keyword, 사전규격명):
-    screenshot_hwp(keyword, 사전규격명)  # 한글 처리와 동일 (테스트 예정)
+    screenshot_hwp(keyword, 사전규격명)  # 한글 처리와 동일
 
 
 # ============================================== PDF 함수 ==============================================
@@ -450,10 +424,15 @@ def screenshot_pdf(keyword, 사전규격명):
         # Adobe Acrobat Reader 연결 (경로 필요 시 명시적으로 설정)
         app = pywinauto.Application().connect(path=acrobat_path)
 
-        pdf_window = app.window(title_re=".*Adobe Acrobat Reader.*")
-
         # PDF 뷰어 로딩 대기
-        time.sleep(7)
+        time.sleep(5)
+
+        pdf_window = app.window(title_re=".*Adobe Acrobat.*")
+
+        # 문서의 맨 위로 이동 (Ctrl + HOME)
+        pdf_window.type_keys("^({HOME})")
+        logging.info("문서 맨 위로 이동")
+        time.sleep(1)
 
         # 키워드 검색 모드 활성화 (Ctrl+F)
         pdf_window.type_keys("^f")
@@ -476,6 +455,14 @@ def screenshot_pdf(keyword, 사전규격명):
         # 스크린샷 캡처
         capture_count = 0
         while True:
+
+            # pdf_edit_complete 창 확인 (모든 검색 완료 후 종료)
+            pdf_edit_complete = app.window(title_re="Adobe Acrobat")
+            if pdf_edit_complete.exists():
+                print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
+                pyautogui.press("enter")  # ENTER 키를 눌러 창 닫기
+                return True  # 모든 검색 종료
+
             try:
                 # 화면 캡처 영역 (적절히 조정 필요)
                 x1, y1 = 100, 100  # 좌측 상단 좌표
@@ -519,6 +506,16 @@ def close_acrobat_reader():
 
 # ============================================== 워드 함수 ==============================================
 
+# 워드 파일 닫는 함수
+def close_word_file():
+    # Word 프로세스 종료
+    for proc in psutil.process_iter(["pid", "name"]):
+        if "WINWORD.EXE" in proc.info["name"]:  # Word 프로세스 이름 확인
+            os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
+            print("Microsoft Word가 종료되었습니다.")
+            return
+    print("Microsoft Word가 실행 중이 아닙니다.")
+
 
 # 다운로드된 워드 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_docx_file(file_path, keywords, 사전규격명):
@@ -532,6 +529,8 @@ def handle_docx_file(file_path, keywords, 사전규격명):
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
         screenshot_docx(keyword, 사전규격명)
+    
+    close_word_file()
 
 
 def screenshot_docx(keyword, 사전규격명):
@@ -539,26 +538,42 @@ def screenshot_docx(keyword, 사전규격명):
     try:
         app = pywinauto.Application().connect(path=word_path)  # 워드 프로그램 경로
 
-        word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
-
         # 워드 로딩
         time.sleep(5)
 
+        word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
+
+        # 문서의 맨 위로 이동 (Ctrl + Page Up)
+        word_window.type_keys("^({PGUP})")
+        logging.info("문서 맨 위로 이동")
+        time.sleep(1)
+
         # 모든 컨트롤 요소들 출력 (child_window)
-        word_window.print_control_identifiers()
+        # word_window.print_control_identifiers()
 
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         word_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
         time.sleep(2)
 
-        word_window.type_keys(keyword)  # 검색어 입력
-        logging.info("검색어 입력")
-        time.sleep(2)
+        # 워드 메인 편집창 찾기
+        word_edit = app.window(title_re=".*찾기.*")
+        # word_edit.print_control_identifiers()
 
-        # 검색
-        word_window.type_keys("{ENTER}")
-        logging.info("검색 시작")
+        if not word_edit:
+            print("워드 편집창을 찾을 수 없습니다.")
+            return
+        
+        # 포커스를 주고 키워드 입력
+        word_edit.set_focus()
+        time.sleep(1)
+        word_edit.type_keys(keyword, with_spaces=True, pause=0.1)
+        logging.info(f"검색어 입력: {keyword}")
+        time.sleep(1)
+
+        # 엔터 키 입력 (검색 실행)
+        word_edit.type_keys("{ENTER}")
+        logging.info("검색 실행")
 
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
@@ -566,6 +581,14 @@ def screenshot_docx(keyword, 사전규격명):
         capture_count = 0
 
         while True:
+
+            # word_edit_complete 창 확인 (모든 검색 완료 후 종료)
+            word_edit_complete = app.window(title_re="Microsoft Word")
+            if word_edit_complete.exists():
+                print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
+                pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+                return True  # 모든 검색 종료
+
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
@@ -582,9 +605,8 @@ def screenshot_docx(keyword, 사전규격명):
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                word_window.set_focus()  # 포커스를 해당 영역으로 이동
-                word_window.type_keys("{ENTER}")  # 다음 검색 결과
-                time.sleep(2)  # 다음 결과가 로드되도록 대기
+                word_edit.type_keys("{ENTER}")
+                time.sleep(2)  # 다음 검색 결과가 로드될 시간 대기
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
@@ -617,26 +639,42 @@ def screenshot_xlsx(keyword, 사전규격명):
     try:
         app = pywinauto.Application().connect(path=excel_path)  # 엑셀 프로그램 경로
 
+        # 엑셀 로딩
+        time.sleep(5)
+
         excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
-        # 엑셀 로딩
-        time.sleep(7)
+        # 문서의 맨 위로 이동 (Ctrl + Page Up)
+        excel_window.type_keys("^({PGUP})")
+        logging.info("문서 맨 위로 이동")
+        time.sleep(1)
 
         # 모든 컨트롤 요소들 출력 (child_window)
-        excel_window.print_control_identifiers()
+        # excel_window.print_control_identifiers()
 
         # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
         excel_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
         time.sleep(2)
 
-        excel_window.type_keys(keyword)  # 검색어 입력
-        logging.info("검색어 입력")
-        time.sleep(2)
+         # 엑셀 메인 편집창 찾기
+        excel_edit = app.window(title_re=".*찾기.*")
+        # word_edit.print_control_identifiers()
 
-        # 검색
-        excel_window.type_keys("{ENTER}")
-        logging.info("검색 시작")
+        if not excel_edit:
+            print("엑셀 편집창을 찾을 수 없습니다.")
+            return
+        
+        # 포커스를 주고 키워드 입력
+        excel_edit.set_focus()
+        time.sleep(1)
+        excel_edit.type_keys(keyword, with_spaces=True, pause=0.1)
+        logging.info(f"검색어 입력: {keyword}")
+        time.sleep(1)
+
+        # 엔터 키 입력 (검색 실행)
+        excel_edit.type_keys("{ENTER}")
+        logging.info("검색 실행")
 
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
@@ -644,6 +682,14 @@ def screenshot_xlsx(keyword, 사전규격명):
         capture_count = 0
 
         while True:
+
+            # excel_edit_complete 창 확인 (모든 검색 완료 후 종료)
+            excel_edit_complete = app.window(title_re="한글")
+            if excel_edit_complete.exists():
+                print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
+                pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+                return True  # 모든 검색 종료
+
             try:
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
@@ -872,10 +918,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["dfdvrg", "시스템", "울산다운", "정보", "리포팅"]
+search_keywords = ["비교과", "시스템", "울산다운", "정보", "리포팅"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["정보", "시스템", "리포트", "Report", "전자문서"]
+file_search_keywords = ["리포트", "추진", "레포팅", "Report", "전자문서"]
 
 for search_word in search_keywords:
 
