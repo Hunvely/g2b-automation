@@ -851,7 +851,8 @@ def open_extracted_files(extract_folder, keywords, 사전규격명):
             time.sleep(1)
             handle_xlsx_file(file_path, keywords, 사전규격명)
         else:
-            print(f"지원되지 않는 파일 형식입니다: {file_name}")
+            logging.info("해당 확장자에 대한 업데이트 필요, 한글 파일 처리 시작")
+            handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
 
 
 # 원본 ZIP 파일 삭제
@@ -1170,6 +1171,9 @@ for search_word in search_keywords:
                 elif file_extension == "zip":  # ZIP 폴더
                     logging.info("ZIP 폴더 처리 시작")
                     handle_ZIP(latest_file, file_search_keywords, 사전규격명)
+                else:
+                    logging.info("해당 확장자에 대한 업데이트 필요, 한글 파일 처리 시작")
+                    handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
             else:
                 logging.warning("다운로드된 파일이 없습니다.")
 
