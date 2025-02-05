@@ -461,6 +461,10 @@ def screenshot_pdf(keyword, 사전규격명):
             if pdf_edit_complete.exists():
                 print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
                 pyautogui.press("enter")  # ENTER 키를 눌러 창 닫기
+                time.sleep(1)
+                pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_1
+                time.sleep(1)
+                pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_2
                 return True  # 모든 검색 종료
 
             try:
@@ -543,10 +547,12 @@ def screenshot_docx(keyword, 사전규격명):
 
         word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
 
-        # 문서의 맨 위로 이동 (Ctrl + Page Up)
-        word_window.type_keys("^({PGUP})")
-        logging.info("문서 맨 위로 이동")
-        time.sleep(1)
+        # 문서의 맨 위로 이동 (최초 한 번만 실행)
+        if not hasattr(screenshot_docx, "moved_to_top"):
+            word_window.type_keys("^({HOME})")  # Ctrl + Home
+            logging.info("문서 맨 위로 이동")
+            screenshot_docx.moved_to_top = True  # 최초 실행 여부 저장
+            time.sleep(1)
 
         # 모든 컨트롤 요소들 출력 (child_window)
         # word_window.print_control_identifiers()
@@ -612,6 +618,8 @@ def screenshot_docx(keyword, 사전규격명):
                 print(f"검색 결과 끝 또는 오류: {e}")
                 break
 
+        # ESC 키 한 번 누르기
+        pyautogui.press("esc")
         print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
 
     except Exception as e:
@@ -785,14 +793,19 @@ def open_extracted_files(extract_folder, keywords, 사전규격명):
 
         # 파일 확장자별 처리
         if file_extension == "hwp":
+            time.sleep(1)
             handle_hwp_file(file_path, keywords, 사전규격명)
         elif file_extension == "hwpx":
+            time.sleep(1)
             handle_hwpx_file(file_path, keywords, 사전규격명)
         elif file_extension == "pdf":
+            time.sleep(1)
             handle_pdf_file(file_path, keywords, 사전규격명)
         elif file_extension == "docx":
+            time.sleep(1)
             handle_docx_file(file_path, keywords, 사전규격명)
         elif file_extension == "xlsx":
+            time.sleep(1)
             handle_xlsx_file(file_path, keywords, 사전규격명)
         else:
             print(f"지원되지 않는 파일 형식입니다: {file_name}")
