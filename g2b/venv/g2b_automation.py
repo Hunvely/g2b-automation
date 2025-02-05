@@ -911,9 +911,22 @@ pre_specification_click.click()
 logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
 
-# 어제 날짜 계산
-yesterday = datetime.now() - timedelta(days=1)
-yesterday_str = yesterday.strftime("%Y%m%d")
+# 오늘 날짜 가져오기
+today = datetime.now()
+
+# 오늘이 월요일인지 확인
+if today.weekday() == 0:  # 월요일이면 0
+    # 금요일, 일요일 날짜 계산
+    friday = today - timedelta(days=3)
+    sunday = today - timedelta(days=1)
+
+    # 지난주 금토일 범위 적용
+    start_date = friday.strftime("%Y%m%d")
+    end_date = sunday.strftime("%Y%m%d")
+else:
+    # 월요일이 아니면 어제 날짜 사용
+    yesterday = today - timedelta(days=1)
+    start_date = end_date = yesterday.strftime("%Y%m%d")
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
@@ -927,8 +940,8 @@ logging.info("기존 진행일자 시작일 제거 완료")
 time.sleep(1)
 
 # 진행일자 시작일 입력
-start_date_click.send_keys(yesterday_str)
-logging.info(f"시작일 {yesterday_str} 입력 완료")
+start_date_click.send_keys(start_date)
+logging.info(f"시작일 {start_date} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -943,8 +956,8 @@ logging.info("기존 진행일자 종료일 제거 완료")
 time.sleep(1)
 
 # 진행일자 종료일 입력
-end_date_click.send_keys(yesterday_str)
-logging.info(f"종료일 {yesterday_str} 입력 완료")
+end_date_click.send_keys(end_date)
+logging.info(f"종료일 {end_date} 입력 완료")
 time.sleep(1)
 
 # 상세 조건 펼치기
