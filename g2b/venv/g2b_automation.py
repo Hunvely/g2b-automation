@@ -1093,7 +1093,10 @@ for search_word in search_keywords:
             data = extract_data(driver)
             if data:
                 logging.info(f"추출된 데이터: {data}")
-                time.sleep(1)
+                # 사전규격상세정보_URL이 'N/A'가 아닌 경우에만 엑셀에 저장
+                if data["사전규격상세정보_URL"] != "N/A":
+                    save_to_excel(data)  # 엑셀 파일에 저장
+                    time.sleep(1)
             else:
                 logging.warning("데이터 추출 실패")
                 time.sleep(1)
