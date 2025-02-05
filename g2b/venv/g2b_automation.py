@@ -349,6 +349,9 @@ def screenshot_hwp(keyword, 사전규격명):
                 return True  # 모든 검색 종료
 
             try:
+                # 중복된 파일명 방지하기 위해 타임스태프 설정
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
+
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
                 width, height = 1800, 800
@@ -357,14 +360,15 @@ def screenshot_hwp(keyword, 사전규격명):
                 # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
-                screenshot_file = os.path.join(screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png")
+                screenshot_file = os.path.join(
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
+                )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
-                # "다음 찾기" 버튼 클릭
-                hwp_edit.type_keys("{ENTER}")
-                time.sleep(2)  # 다음 검색 결과가 로드될 시간 대기
-                # hwp_edit.print_control_identifiers()
+                # 다음 검색 결과로 이동
+                hwp_edit.type_keys("{ENTER}")  # 다음 검색 결과
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
@@ -469,29 +473,30 @@ def screenshot_pdf(keyword, 사전규격명):
                 return True  # 모든 검색 종료
 
             try:
-                # 화면 캡처 영역 (적절히 조정 필요)
-                x1, y1 = 100, 100  # 좌측 상단 좌표
-                width, height = 2000, 800  # 캡처 영역 크기
-                x2, y2 = x1 + width, y1 + height
+                # 중복된 파일명 방지하기 위해 타임스태프 설정
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
 
-                # 스크린샷 저장
+                # 스크린샷 영역 설정
+                x1, y1 = 100, 200  # 좌측 상단 좌표
+                width, height = 1800, 800
+                x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+
+                # 스크린샷 찍기
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
                 screenshot_file = os.path.join(
-                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
                 )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
-                # 다음 검색 결과로 이동 (Enter 키)
-                pdf_window.type_keys("{ENTER}")
-                time.sleep(2)
-
-                # 검색 완료 시 처리 필요
+                # 다음 검색 결과로 이동
+                pdf_window.type_keys("{ENTER}")  # 다음 검색 결과
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
-                break  # 루프 종료
+                break
 
         print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
 
@@ -597,6 +602,9 @@ def screenshot_docx(keyword, 사전규격명):
                 return True  # 모든 검색 종료
 
             try:
+                # 중복된 파일명 방지하기 위해 타임스태프 설정
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
+
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
                 width, height = 1800, 800
@@ -606,14 +614,14 @@ def screenshot_docx(keyword, 사전규격명):
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
                 screenshot_file = os.path.join(
-                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
                 )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                word_edit.type_keys("{ENTER}")
-                time.sleep(2)  # 다음 검색 결과가 로드될 시간 대기
+                word_edit.type_keys("{ENTER}")  # 다음 검색 결과
+                time.sleep(2)  # 다음 결과가 로드되도록 대기
 
             except Exception as e:
                 print(f"검색 결과 끝 또는 오류: {e}")
@@ -732,6 +740,9 @@ def screenshot_xlsx(keyword, 사전규격명):
             search_texts.add(copied_text)  # 새로운 검색 결과 저장
 
             try:
+                # 중복된 파일명 방지하기 위해 타임스태프 설정
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
+
                 # 스크린샷 영역 설정
                 x1, y1 = 100, 200  # 좌측 상단 좌표
                 width, height = 1800, 800
@@ -741,7 +752,7 @@ def screenshot_xlsx(keyword, 사전규격명):
                 screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
                 capture_count += 1
                 screenshot_file = os.path.join(
-                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}.png"
+                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
                 )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
