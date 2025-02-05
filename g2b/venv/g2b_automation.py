@@ -21,6 +21,7 @@ import pywinauto
 import win32com.client
 import pandas as pd
 from openpyxl import load_workbook
+import pyperclip
 
 
 # 로깅 설정
@@ -628,6 +629,16 @@ def screenshot_docx(keyword, 사전규격명):
 
 # ============================================== 엑셀 함수 ==============================================
 
+# 엑셀 파일 닫는 함수
+def close_excel_file():
+    # Word 프로세스 종료
+    for proc in psutil.process_iter(["pid", "name"]):
+        if "EXCEL.EXE" in proc.info["name"]:  # Word 프로세스 이름 확인
+            os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
+            print("Microsoft Excel 종료되었습니다.")
+            return
+    print("Microsoft Excel가 실행 중이 아닙니다.")
+
 
 # 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
 def handle_xlsx_file(file_path, keywords, 사전규격명):
@@ -642,6 +653,7 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
         # 키워드 검색 후 스크린샷 찍기
         screenshot_xlsx(keyword, 사전규격명)
 
+    close_excel_file()
 
 def screenshot_xlsx(keyword, 사전규격명):
     try:
@@ -653,7 +665,7 @@ def screenshot_xlsx(keyword, 사전규격명):
         excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
         # 문서의 맨 위로 이동 (Ctrl + Page Up)
-        excel_window.type_keys("^({PGUP})")
+        excel_window.type_keys("^({HOME})")
         logging.info("문서 맨 위로 이동")
         time.sleep(1)
 
@@ -688,15 +700,36 @@ def screenshot_xlsx(keyword, 사전규격명):
         time.sleep(2)
 
         capture_count = 0
+        search_texts = set()  # 검색 결과 중복 감지를 위한 저장 공간
 
         while True:
 
             # excel_edit_complete 창 확인 (모든 검색 완료 후 종료)
-            excel_edit_complete = app.window(title_re="한글")
+            excel_edit_complete = app.window(title_re="Microsoft Excel")
             if excel_edit_complete.exists():
                 print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
-                pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
+                pyautogui.press("enter")  # ENTER 키를 눌러 다이얼로그 닫기
+                time.sleep(1)
+                pyautogui.press("esc")  # ESC 키를 눌러 검색창 닫기
                 return True  # 모든 검색 종료
+
+            # 검색된 셀의 내용 가져오기 (Ctrl + C)
+            excel_window.set_focus()
+            excel_window.type_keys("^c")  # 복사 (Ctrl + C)
+            time.sleep(0.5)
+
+            # 클립보드에서 값 읽기
+            copied_text = pyperclip.paste().strip()
+            copied_text = " ".join(copied_text.split())  # 줄바꿈/여러 공백 제거
+            logging.info(f"검색된 텍스트: {copied_text}")
+
+            if copied_text in search_texts:
+                print(f"'{keyword}' 검색 종료 (중복 감지)")
+                time.sleep(1)
+                excel_edit.type_keys("{ESC}")  # ESC 키를 눌러 검색창 닫기
+                break
+
+            search_texts.add(copied_text)  # 새로운 검색 결과 저장
 
             try:
                 # 스크린샷 영역 설정
@@ -714,8 +747,7 @@ def screenshot_xlsx(keyword, 사전규격명):
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
                 # 다음 검색 결과로 이동
-                excel_window.set_focus()  # 포커스를 해당 영역으로 이동
-                excel_window.type_keys("{ENTER}")  # 다음 검색 결과
+                excel_edit.type_keys("{ENTER}")  # 다음 검색 결과
                 time.sleep(2)  # 다음 결과가 로드되도록 대기
 
             except Exception as e:
@@ -931,10 +963,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["비교과", "시스템", "울산다운", "정보", "리포팅"]
+search_keywords = ["주소정보시설", "시스템", "울산다운", "정보", "리포팅"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["리포트", "추진", "레포팅", "Report", "전자문서"]
+file_search_keywords = ["주소", "추진", "레포팅", "Report", "전자문서"]
 
 for search_word in search_keywords:
 
