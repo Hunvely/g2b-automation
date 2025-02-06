@@ -893,6 +893,7 @@ if popup_elements:
         time.sleep(1)  # 각 팝업마다 1초 대기
 else:
     logging.info("팝업 없음")  # 팝업이 없을 경우 로깅
+    time.sleep(1)
 
 # 발주 메뉴 클릭
 ordering = "mf_wfm_gnb_wfm_gnbMenu_genDepth1_0_btn_menuLvl1_span"
@@ -991,10 +992,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["주소정보시설", "시스템", "울산다운", "정보", "리포팅"]
+search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["주소", "추진", "레포팅", "Report", "전자문서"]
+file_search_keywords = ["리포팅", "레포팅", "리포트", "Report", "전자문서", "유비", "UBI"]
 
 for search_word in search_keywords:
 
