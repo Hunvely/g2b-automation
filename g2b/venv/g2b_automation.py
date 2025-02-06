@@ -430,9 +430,9 @@ def screenshot_pdf(keyword, 사전규격명):
         app = pywinauto.Application().connect(path=acrobat_path)
 
         # PDF 뷰어 로딩 대기
-        time.sleep(5)
+        time.sleep(7)
 
-        pdf_window = app.window(title_re=".*Adobe Acrobat.*")
+        pdf_window = app.window(title_re=".*Adobe.*")
 
         # 문서의 맨 위로 이동 (Ctrl + HOME)
         pdf_window.type_keys("^({HOME})")
@@ -992,7 +992,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
+search_keywords = ["SW중심대학사업단", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
 file_search_keywords = ["리포팅", "레포팅", "리포트", "Report", "전자", "유비", "UBI"]
