@@ -847,7 +847,7 @@ def open_extracted_files(extract_folder, keywords, 사전규격명):
         elif file_extension == "docx":
             time.sleep(1)
             handle_docx_file(file_path, keywords, 사전규격명)
-        elif file_extension == "xlsx":
+        elif file_extension == "xlsx" or file_extension == "xls":
             time.sleep(1)
             handle_xlsx_file(file_path, keywords, 사전규격명)
         else:
@@ -995,7 +995,7 @@ time.sleep(1)
 search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["리포팅", "레포팅", "리포트", "Report", "전자문서", "유비", "UBI"]
+file_search_keywords = ["리포팅", "레포팅", "리포트", "Report", "전자", "유비", "UBI"]
 
 for search_word in search_keywords:
 
@@ -1169,7 +1169,7 @@ for search_word in search_keywords:
                 elif file_extension == "docx":  # Word 파일
                     logging.info("Word 파일 (DOCX) 처리 시작")
                     handle_docx_file(latest_file, file_search_keywords, 사전규격명)
-                elif file_extension == "xlsx":  # Excel 파일
+                elif file_extension == "xlsx" or file_extension == "xls":  # Excel 파일
                     logging.info("Excel 파일 (XLSX) 처리 시작")
                     handle_xlsx_file(latest_file, file_search_keywords, 사전규격명)
                 elif file_extension == "zip":  # ZIP 폴더
