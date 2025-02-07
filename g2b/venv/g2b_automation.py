@@ -22,6 +22,7 @@ import win32com.client
 import pandas as pd
 from openpyxl import load_workbook
 import pyperclip
+from pywinauto.keyboard import send_keys
 
 
 # 로깅 설정
@@ -326,7 +327,11 @@ def screenshot_hwp(keyword, 사전규격명):
         # 포커스를 주고 키워드 입력
         hwp_edit.set_focus()
         time.sleep(1)
-        hwp_edit.type_keys(keyword, with_spaces=True, pause=0.1)
+        pyperclip.copy(keyword)
+        time.sleep(1)
+        hwp_edit.click_input()
+        time.sleep(1)
+        send_keys("^v")  
         logging.info(f"검색어 입력: {keyword}")
         time.sleep(1)
 
@@ -995,7 +1000,7 @@ time.sleep(1)
 search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["리포팅", "레포팅", "리포트", "Report", "전자", "유비", "UBI"]
+file_search_keywords = ["전자문서", "레포팅", "리포트", "리포팅", "Report", "유비", "UBI"]
 
 for search_word in search_keywords:
 
