@@ -165,7 +165,6 @@ def extract_data(driver):
         logging.error(f"데이터 추출 중 오류 발생: {e}")
         return None
 
-
 def save_to_excel(data):
     try:
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -175,13 +174,16 @@ def save_to_excel(data):
             logging.info(f"폴더가 존재하지 않음. 폴더를 생성합니다: {excel_folder}")
             os.makedirs(excel_folder)
 
-        file_name = "사전규격상세정보.xlsx"
+        file_name = "사전규격_기본정보.xlsx"
         full_path = os.path.join(excel_folder, file_name)
 
         logging.info(f"엑셀 파일 경로: {full_path}")
 
-        sheet_name = "데이터"
-        df = pd.DataFrame([data])  
+        sheet_name = "기본정보"
+
+        # '사전규격상세정보_URL'을 제외한 데이터만 선택
+        filtered_data = {k: v for k, v in data.items() if k != "사전규격상세정보_URL"}
+        df = pd.DataFrame([filtered_data])  
 
         if os.path.exists(full_path):
             logging.info(f"기존 파일이 존재합니다. 데이터를 추가합니다: {full_path}")
@@ -196,7 +198,7 @@ def save_to_excel(data):
             with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
                 combined_df.to_excel(writer, index=False, sheet_name=sheet_name)
         else:
-            logging.info("새로운 엑셀 파일을 생성합니다.")
+            logging.info(f"'{file_name}' 파일을 생성합니다.")
             with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
                 df.to_excel(writer, index=False, sheet_name=sheet_name)
 
@@ -225,7 +227,70 @@ def save_to_excel(data):
         # 파일 저장
         wb.save(full_path)
 
-        logging.info(f"데이터가 {full_path} 파일에 추가되었습니다.")
+        logging.info(f"데이터가 '{sheet_name}' 시트의 {full_path} 파일에 추가되었습니다.")
+    except Exception as e:
+        logging.error(f"엑셀 저장 중 오류 발생: {e}")
+
+def save_to_excel_url(data):
+    try:
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        excel_folder = os.path.join(desktop_path, "엑셀파일")
+
+        if not os.path.exists(excel_folder):
+            logging.info(f"폴더가 존재하지 않음. 폴더를 생성합니다: {excel_folder}")
+            os.makedirs(excel_folder)
+
+        file_name = "사전규격_상세정보_url.xlsx"
+        full_path = os.path.join(excel_folder, file_name)
+
+        logging.info(f"엑셀 파일 경로: {full_path}")
+
+        sheet_name = "URL"
+        df = pd.DataFrame([data])  
+
+        if os.path.exists(full_path):
+            logging.info(f"기존 파일이 존재합니다. 데이터를 추가합니다: {full_path}")
+
+            # 기존 데이터 불러오기
+            existing_df = pd.read_excel(full_path, sheet_name=sheet_name, engine="openpyxl")
+
+            # 새로운 데이터를 기존 데이터와 합치기
+            combined_df = pd.concat([existing_df, df], ignore_index=True)
+
+            # 합친 데이터를 다시 저장
+            with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
+                combined_df.to_excel(writer, index=False, sheet_name=sheet_name)
+        else:
+            logging.info(f"'{file_name}' 파일을 생성합니다.")
+            with pd.ExcelWriter(full_path, engine="openpyxl", mode="w") as writer:
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        # 엑셀 파일 열기 (openpyxl로 셀 크기 조정)
+        wb = load_workbook(full_path)
+        sheet = wb[sheet_name]
+
+        # 셀 크기 자동 조정 코드 개선
+        for col in sheet.columns:
+            max_length = 0
+            column = col[0].column_letter  # 열의 알파벳(A, B, C 등)
+
+            for cell in col:
+                try:
+                    if cell.value:
+                        # 한글과 영어 너비 차이 보정
+                        text = str(cell.value)
+                        text_length = sum(2 if ord(char) > 127 else 1 for char in text)  # 한글이면 2, 영어는 1로 계산
+                        max_length = max(max_length, text_length)
+                except:
+                    pass
+
+            adjusted_width = (max_length * 1.2)  # 한글 보정 계수 적용
+            sheet.column_dimensions[column].width = adjusted_width
+
+        # 파일 저장
+        wb.save(full_path)
+
+        logging.info(f"데이터가 '{sheet_name}' 시트의 {full_path} 파일에 추가되었습니다.")
     except Exception as e:
         logging.error(f"엑셀 저장 중 오류 발생: {e}")
 
@@ -475,6 +540,7 @@ def screenshot_pdf(keyword, 사전규격명):
                 pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_1
                 time.sleep(1)
                 pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_2
+                time.sleep(1)
                 return True  # 모든 검색 종료
 
             try:
@@ -1084,7 +1150,7 @@ for search_word in search_keywords:
                         # 사전규격상세정보_URL이 'N/A'가 아닌 경우에만 엑셀에 저장
                         if data["사전규격상세정보_URL"] != "N/A":
                             logging.info(f"추출된 데이터: {data}")
-                            save_to_excel(data)  # 엑셀 파일에 저장
+                            save_to_excel_url(data)  # 엑셀 파일에 저장
                             time.sleep(1)
                         else:
                             logging.warning("사전규격상세정보 URL이 존재하지 않습니다.")
@@ -1118,11 +1184,15 @@ for search_word in search_keywords:
                 logging.info(f"추출된 데이터: {data}")
                 # 사전규격상세정보_URL이 'N/A'가 아닌 경우에만 엑셀에 저장
                 if data["사전규격상세정보_URL"] != "N/A":
-                    save_to_excel(data)  # 엑셀 파일에 저장
+                    save_to_excel_url(data)  # 엑셀 파일에 저장
                     time.sleep(1)
             else:
                 logging.warning("데이터 추출 실패")
                 time.sleep(1)
+            
+            # 해당 사전규격 기본 정보 엑셀에 저장    
+            save_to_excel(data)
+            time.sleep(1)
 
             # 스크롤 조건: 첨부파일이 화면에 보일 때까지
             if scroll_until_element_visible(driver):
@@ -1146,7 +1216,7 @@ for search_word in search_keywords:
             time.sleep(1)
             download_button.click()
             logging.info("파일 다운로드 완료")
-            time.sleep(1)
+            time.sleep(2)
 
             # 다운로드된 최신 파일 찾기
             logging.info("다운로드된 파일 찾는 중")
