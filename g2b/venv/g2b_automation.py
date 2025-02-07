@@ -23,6 +23,7 @@ import pandas as pd
 from openpyxl import load_workbook
 import pyperclip
 from pywinauto.keyboard import send_keys
+import shutil
 
 
 # 로깅 설정
@@ -302,6 +303,39 @@ def get_latest_downloaded_file(download_dir):
     latest_file = max(files_with_path, key=os.path.getmtime)
     return latest_file
 
+def rename_file(latest_file, 사전규격명, download_dir):
+    # .zip 파일은 이름 변경 안 함
+    file_extension = os.path.splitext(latest_file)[1].lower()
+
+    if file_extension == ".zip":
+        logging.info(f"ZIP 파일은 이름을 변경하지 않습니다: {latest_file}")
+        return latest_file
+    
+    # 기존 파일명과 확장자 분리
+    base_name, ext = os.path.splitext(latest_file)
+    
+    # 새로운 파일명 생성 (사전규격명 + 기존 파일명)
+    new_file_name = f"{사전규격명}_{os.path.basename(base_name)}{ext}"
+    
+    # 새 파일 경로
+    new_file_path = os.path.join(download_dir, new_file_name)
+
+    try:
+        # 파일 이름 변경 (덮어쓰기 허용)
+        if os.path.exists(new_file_path):
+            os.remove(new_file_path)  # 기존 파일 삭제
+        shutil.move(latest_file, new_file_path)  # 파일 이동 및 덮어쓰기
+
+        logging.info(f"파일 이름이 '{latest_file}'에서 '{new_file_name}'로 변경되었습니다.")
+    except Exception as e:
+        logging.error(f"파일 이름 변경 중 오류 발생: {str(e)}")
+
+    # 기존 파일 삭제
+    if os.path.exists(latest_file):
+        os.remove(latest_file)
+        logging.info(f"기존 파일 '{latest_file}'이(가) 삭제되었습니다.")
+    
+    return new_file_path
 
 # Windows에서 파일을 여는 함수 (공통)
 def open_file(file_path):
@@ -1153,7 +1187,7 @@ for search_word in search_keywords:
                             save_to_excel_url(data)  # 엑셀 파일에 저장
                             time.sleep(1)
                         else:
-                            logging.warning("사전규격상세정보 URL이 존재하지 않습니다.")
+                            logging.info("사전규격상세정보 URL이 존재하지 않습니다.")
                             time.sleep(1)
                     else:
                         logging.warning("데이터 추출 실패")
@@ -1229,30 +1263,33 @@ for search_word in search_keywords:
                 사전규격명 = data.get("사전규격명", "N/A")
 
                 logging.info(f"최근 다운로드된 파일: {latest_file}")
-                # handle_file(latest_file)
+
+                # 파일명 변경
+                renamed_file = rename_file(latest_file, 사전규격명, download_dir)
+
                 file_extension = latest_file.lower().split(".")[-1]  # 확장자 확인
 
                 if file_extension == "hwp":  # HWP 파일인 경우
                     logging.info("한글 파일 처리 시작")
-                    handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_hwp_file(renamed_file, file_search_keywords, 사전규격명)
                 elif file_extension == "hwpx":  # HWPX 파일
                     logging.info("HWPX 파일 처리 시작")
-                    handle_hwpx_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_hwpx_file(renamed_file, file_search_keywords, 사전규격명)
                 elif file_extension == "pdf":  # PDF 파일
                     logging.info("PDF 파일 처리 시작")
-                    handle_pdf_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_pdf_file(renamed_file, file_search_keywords, 사전규격명)
                 elif file_extension == "docx":  # Word 파일
                     logging.info("Word 파일 (DOCX) 처리 시작")
-                    handle_docx_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_docx_file(renamed_file, file_search_keywords, 사전규격명)
                 elif file_extension == "xlsx" or file_extension == "xls":  # Excel 파일
                     logging.info("Excel 파일 (XLSX) 처리 시작")
-                    handle_xlsx_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_xlsx_file(renamed_file, file_search_keywords, 사전규격명)
                 elif file_extension == "zip":  # ZIP 폴더
                     logging.info("ZIP 폴더 처리 시작")
                     handle_ZIP(latest_file, file_search_keywords, 사전규격명)
                 else:
                     logging.info("해당 확장자에 대한 업데이트 필요, 한글 파일 처리 시작")
-                    handle_hwp_file(latest_file, file_search_keywords, 사전규격명)
+                    handle_hwp_file(renamed_file, file_search_keywords, 사전규격명)
             else:
                 logging.warning("다운로드된 파일이 없습니다.")
 
