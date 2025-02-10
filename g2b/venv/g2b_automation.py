@@ -56,10 +56,15 @@ screenshot_dir = os.path.join(home_dir, "Desktop", "스크린샷")
 download_dir = os.path.join(home_dir, "Desktop", "첨부파일")
 
 # 폴더가 없으면 생성
+if not os.path.exists(screenshot_dir):
+    os.makedirs(screenshot_dir)
+
+# 폴더가 없으면 생성
 if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 
-print("다운로드 경로:", download_dir)
+print("다운로드 폴더 경로:", download_dir)
+print("스크린샷 폴더 경로:", screenshot_dir)
 
 # ChromeOptions 설정
 options = Options()
@@ -1235,18 +1240,16 @@ for search_word in search_keywords:
                 logging.warning("첨부파일을 찾지 못했습니다.")
 
             # 전체 선택 체크박스 클릭
-            checkbox = driver.find_element(
-                By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']"
-            )
+            checkbox = WebDriverWait(driver, 15).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']")))
             checkbox.click()
             logging.info("모든 첨부파일을 선택")
             time.sleep(2)
 
             # 파일 다운로드
             logging.info("파일 다운로드 시작")
-            download_button = driver.find_element(
-                By.CSS_SELECTOR, "[id*='_btnFileDown']"
-            )
+            download_button = WebDriverWait(driver, 15).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "[id*='_btnFileDown']")))
             time.sleep(1)
             download_button.click()
             logging.info("파일 다운로드 완료")
@@ -1294,7 +1297,9 @@ for search_word in search_keywords:
                 logging.warning("다운로드된 파일이 없습니다.")
 
             # 파일 처리 후 이전 페이지로 돌아가기
+            time.sleep(1)
             driver.back()
+            logging.info("파일 처리 완료 후, 이전 페이지로 돌아가기")
             time.sleep(1)
 
             # 페이지가 로드된 후 다시 rows 가져오기
@@ -1320,7 +1325,8 @@ for search_word in search_keywords:
                     # 다음 페이지 버튼 찾기
                     next_page_number = current_page_number + 1
                     try:
-                        next_page_button = driver.find_element(By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")
+                        next_page_button = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")))
                     except:
                         logging.info("다음 페이지 없음. 모든 검색 완료.")
                         break  # 더 이상 페이지가 없으면 종료
@@ -1330,7 +1336,7 @@ for search_word in search_keywords:
                     logging.info(f"{next_page_number} 페이지로 이동 중...")
                     time.sleep(2)
 
-                    WebDriverWait(driver, 10).until(
+                    WebDriverWait(driver, 15).until(
                         EC.presence_of_element_located((By.ID, tbody_id))
                     )
 
