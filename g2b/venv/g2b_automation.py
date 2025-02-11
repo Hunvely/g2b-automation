@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 import os
+import re
 import zipfile
 import chromedriver_autoinstaller
 import pyautogui
@@ -86,20 +87,6 @@ driver = webdriver.Chrome(options)
 
 def random_wait():
     time.sleep(random.uniform(1.5, 4.0))  # 1.5초에서 4초 사이의 랜덤 대기
-
-
-# 팝업 닫기 함수 (XPath로 팝업 id를 찾고 닫기)
-def close_popup(popup_xpath):
-    try:
-        # 요소가 존재하고 클릭 가능할 경우 닫기
-        element = WebDriverWait(driver, 2).until(
-            EC.element_to_be_clickable((By.XPATH, popup_xpath))
-        )
-        element.click()
-        logging.info(f"팝업 닫음: {popup_xpath}")
-    except TimeoutException:
-        logging.info(f"팝업 예외 발생: {popup_xpath}")
-
 
 def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_time=1):
     target_xpath = "//*[contains(@id, 'wq_uuid_') and contains(@class, 'w2textbox')]"
@@ -548,19 +535,21 @@ def screenshot_pdf(keyword, 사전규격명):
         logging.info("문서 맨 위로 이동")
         time.sleep(1)
 
+        pyperclip.copy(keyword)
+
         # 키워드 검색 모드 활성화 (Ctrl+F)
         pdf_window.type_keys("^f")
         print("검색 모달 표시")
         time.sleep(2)
 
         # 키워드 입력
-        pdf_window.type_keys(keyword)
+        send_keys("^v")
         print(f"검색어 '{keyword}' 입력")
         time.sleep(1)
 
         # 검색 시작 (Enter)
         pdf_window.type_keys("{ENTER}")
-        print("검색 시작")
+        print("검색 실행")
         time.sleep(2)
 
         # 검색된 텍스트 영역이 활성화되도록 대기
@@ -988,22 +977,26 @@ time.sleep(8)
 # 창 최대화
 driver.maximize_window()
 
-# 팝업 찾기
-# 정규식으로 팝업 id를 동적으로 찾기 위한 패턴 정의
-popup_pattern = r"//div[contains(@id, 'mf_wfm_container_wq_uuid_877_wq_uuid_884_poupR23AB00000') and contains(@id, '_close')]"
+# 팝업 찾고 닫기
+while True:
+    # data-title="나라장터 공지사항"인 팝업 찾기
+    popup_elements = driver.find_elements(By.XPATH, "//*[@data-title='나라장터 공지사항']")
 
+    if not popup_elements:
+        print("모든 '나라장터 공지사항' 팝업이 닫혔습니다.")
+        break  # 팝업이 없으면 종료
 
-# 페이지에서 팝업 요소들을 찾음
-popup_elements = driver.find_elements(By.XPATH, popup_pattern)
-
-# 팝업이 있으면 닫기
-if popup_elements:
     for popup in popup_elements:
-        close_popup(popup)
-        time.sleep(1)  # 각 팝업마다 1초 대기
-else:
-    logging.info("팝업 없음")  # 팝업이 없을 경우 로깅
-    time.sleep(1)
+        try:
+            # 팝업 내부에서 title="창닫기" 버튼 찾기
+            close_button = popup.find_element(By.XPATH, ".//*[@title='창닫기']")
+            close_button.click()  # 버튼 클릭
+            print("'나라장터 공지사항' 팝업 닫기 버튼 클릭 완료!")
+            time.sleep(1)  # 클릭 후 대기
+        except Exception as e:
+            print(f"팝업 닫기 실패: {e}")
+
+    time.sleep(1)  # 반복문 실행 후 대기
 
 # 발주 메뉴 클릭
 ordering = "mf_wfm_gnb_wfm_gnbMenu_genDepth1_0_btn_menuLvl1_span"
@@ -1102,7 +1095,7 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
+search_keywords = ["2025년 교환설비 시스템 유지보수", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
 file_search_keywords = ["전자문서", "레포팅", "리포트", "리포팅", "Report", "유비", "UBI"]
