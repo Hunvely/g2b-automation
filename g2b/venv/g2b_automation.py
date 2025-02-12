@@ -146,10 +146,10 @@ def extract_data(driver):
         data = {
             "사전규격등록번호": 사전규격등록번호.get_attribute("value") or "N/A",
             "사전규격명": 사전규격명.text or "N/A",
+            "배정예산액": 배정예산액.get_attribute("value") or "N/A",
             "수요기관": 수요기관.get_attribute("value") or "N/A",
             "공고기관": 공고기관.get_attribute("value") or "N/A",
             "담당자": 담당자.get_attribute("value") or "N/A",
-            "배정예산액": 배정예산액.get_attribute("value") or "N/A",
             "의견등록마감일시": 의견등록마감일시.get_attribute("value") or "N/A",
             "사전규격상세정보_URL": 상세정보_URL,
         }
@@ -510,23 +510,28 @@ def handle_pdf_file(file_path, keywords, 사전규격명):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
 
+    first_wait = True  # 첫 실행 여부를 저장
+    
     open_file(file_path)
 
     for keyword in keywords:  # 순차적으로 각 키워드 처리
         # 키워드 검색 후 스크린샷 찍기
-        screenshot_pdf(keyword, 사전규격명)
+        screenshot_pdf(keyword, 사전규격명, first_wait)
+        first_wait = False
 
     # 작업이 끝난 후 Acrobat Reader 닫기
     close_acrobat_reader()
 
-
-def screenshot_pdf(keyword, 사전규격명):
+def screenshot_pdf(keyword, 사전규격명, first_wait):
     try:
         # Adobe Acrobat Reader 연결 (경로 필요 시 명시적으로 설정)
         app = pywinauto.Application().connect(path=acrobat_path)
 
-        # PDF 뷰어 로딩 대기
-        time.sleep(7)
+        # PDF 뷰어 로딩 대기 (처음 실행 시 10초, 이후부터 5초)
+        if first_wait:
+            time.sleep(10)
+        else:
+            time.sleep(5)
 
         pdf_window = app.window(title_re=".*Adobe.*")
 
@@ -545,12 +550,12 @@ def screenshot_pdf(keyword, 사전규격명):
         # 키워드 입력
         send_keys("^v")
         print(f"검색어 '{keyword}' 입력")
-        time.sleep(1)
+        time.sleep(2)
 
         # 검색 시작 (Enter)
         pdf_window.type_keys("{ENTER}")
         print("검색 실행")
-        time.sleep(2)
+        time.sleep(1)
 
         # 검색된 텍스트 영역이 활성화되도록 대기
         time.sleep(2)
@@ -981,6 +986,7 @@ driver.maximize_window()
 while True:
     # data-title="나라장터 공지사항"인 팝업 찾기
     popup_elements = driver.find_elements(By.XPATH, "//*[@data-title='나라장터 공지사항']")
+    time.sleep(1)
 
     if not popup_elements:
         print("모든 '나라장터 공지사항' 팝업이 닫혔습니다.")
@@ -1095,10 +1101,10 @@ search_box_click.click()
 time.sleep(1)
 
 # 검색 키워드
-search_keywords = ["2025년 교환설비 시스템 유지보수", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
+search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어", "차세대", "고도화", "유지관리", "유지보수"]
 
 # 파일 내 검색 키워드
-file_search_keywords = ["전자문서", "레포팅", "리포트", "리포팅", "Report", "유비", "UBI"]
+file_search_keywords = ["레포팅", "리포트", "리포팅", "Report", "유비", "UBI"]
 
 for search_word in search_keywords:
 
