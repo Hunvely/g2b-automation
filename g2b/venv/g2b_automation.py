@@ -45,7 +45,7 @@ hanword_path = r"C:\\Program Files (x86)\\Hnc\\Office NEO\\HOffice96\\Bin\\Hwp.e
 word_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\WINWORD.EXE"
 
 # PDF 파일일 경로
-acrobat_path = r"C:\Program Files\Adobe\Acrobat DC\Acrobat\\Acrobat.exe"
+pdf_path = r"C:\\Program Files (x86)\\Adobe\\Reader 10.0\\Reader\\AcroRd32.exe"
 
 # 엑셀 파일 경로
 excel_path = r"C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE"
@@ -520,20 +520,26 @@ def handle_pdf_file(file_path, keywords, 사전규격명):
         first_wait = False
 
     # 작업이 끝난 후 Acrobat Reader 닫기
-    close_acrobat_reader()
+    close_adobe_reader()
 
 def screenshot_pdf(keyword, 사전규격명, first_wait):
     try:
         # Adobe Acrobat Reader 연결 (경로 필요 시 명시적으로 설정)
-        app = pywinauto.Application().connect(path=acrobat_path)
+        app = pywinauto.Application().connect(path=pdf_path)
 
         # PDF 뷰어 로딩 대기 (처음 실행 시 10초, 이후부터 5초)
         if first_wait:
-            time.sleep(10)
+            time.sleep(30)
         else:
             time.sleep(5)
 
-        pdf_window = app.window(title_re=".*Adobe.*")
+        # 창이 로드될 때까지 대기
+        try:
+            pdf_window = app.window(title_re=".*Adobe Reader.*")  # 최대 30초 대기
+            pdf_window.wait('visible', timeout=30)  # 30초 내에 창이 나타날 때까지 대기
+            print("Adobe Acrobat Reader 창 로드 완료")
+        except TimeoutError:
+            print("Adobe Acrobat Reader 창 로드 실패")
 
         # 문서의 맨 위로 이동 (Ctrl + HOME)
         pdf_window.type_keys("^({HOME})")
@@ -550,7 +556,7 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
         # 키워드 입력
         send_keys("^v")
         print(f"검색어 '{keyword}' 입력")
-        time.sleep(2)
+        time.sleep(3)
 
         # 검색 시작 (Enter)
         pdf_window.type_keys("{ENTER}")
@@ -565,14 +571,12 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
         while True:
 
             # pdf_edit_complete 창 확인 (모든 검색 완료 후 종료)
-            pdf_edit_complete = app.window(title_re="Adobe Acrobat")
+            pdf_edit_complete = app.window(title_re="Adobe Reader")
             if pdf_edit_complete.exists():
                 print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
                 pyautogui.press("enter")  # ENTER 키를 눌러 창 닫기
                 time.sleep(1)
                 pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_1
-                time.sleep(1)
-                pyautogui.press("esc")  # ESE 키를 눌러 검색창 닫기_2
                 time.sleep(1)
                 return True  # 모든 검색 종료
 
@@ -608,14 +612,14 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
         print(f"PDF 파일 처리 중 오류 발생: {e}")
 
 
-def close_acrobat_reader():
+def close_adobe_reader():
     # Acrobat Reader 프로세스 종료
     for proc in psutil.process_iter(["pid", "name"]):
-        if "Acrobat.exe" in proc.info["name"]:  # Acrobat Reader 프로세스 이름 확인
+        if "AcroRd32.exe" in proc.info["name"]:  # Adobe Reader 프로세스 이름 확인
             os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
-            print("Acrobat Reader가 종료되었습니다.")
+            print("Adobe Reader가 종료되었습니다.")
             return
-    print("Acrobat Reader가 실행 중이 아닙니다.")
+    print("Adobe Reader가 실행 중이 아닙니다.")
 
 
 # ============================================== 워드 함수 ==============================================
@@ -1107,7 +1111,7 @@ search_keywords = ["구축", "정보시스템", "통합", "SW", "소프트웨어
 file_search_keywords = ["레포팅", "리포트", "리포팅", "Report", "유비", "UBI"]
 
 for search_word in search_keywords:
-
+    
     # 사업명 입력
     search_box_click.send_keys(search_word)
     logging.info(f"검색 박스에 {search_word} 입력")
@@ -1212,7 +1216,43 @@ for search_word in search_keywords:
                     )
                     current_index += 1
                     time.sleep(1)
-                    continue  # 다음 항목으로 넘어감
+
+                    # 다음 row가 있는지 확인 후 처리
+                    if current_index < len(rows):
+                        time.sleep(1)
+                        continue  # 다음 항목 처리
+                    else:
+                        try:
+                            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                            # 현재 선택된 페이지 확인
+                            current_page = driver.find_element(By.CLASS_NAME, "w2pageList_label_selected")
+                            current_page_number = int(current_page.text)
+
+                            # 다음 페이지 버튼 찾기
+                            next_page_number = current_page_number + 1
+                            try:
+                                next_page_button = WebDriverWait(driver, 10).until(
+                                    EC.element_to_be_clickable((By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")))
+                            except:
+                                logging.info("다음 페이지 없음. 모든 검색 완료.")
+                                break  # 더 이상 페이지가 없으면 종료
+
+                            # 다음 페이지로 이동
+                            next_page_button.click()
+                            logging.info(f"{next_page_number} 페이지로 이동 중...")
+                            time.sleep(2)
+
+                            WebDriverWait(driver, 15).until(
+                                EC.presence_of_element_located((By.ID, tbody_id))
+                            )
+
+                            rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+                            current_index = 0
+
+                        except Exception as e:
+                            logging.warning(f"페이지 이동 실패: {e}")
+                            break
+
             except Exception as e:
                 logging.info("첨부파일이 있는 것으로 판단됩니다. 계속 진행합니다.")
 
