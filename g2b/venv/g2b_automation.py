@@ -989,7 +989,7 @@ driver.maximize_window()
 # 팝업 찾고 닫기
 while True:
     # data-title="나라장터 공지사항"인 팝업 찾기
-    popup_elements = driver.find_elements(By.XPATH, "//*[@data-title='나라장터 공지사항']")
+    popup_elements = driver.find_elements(By.XPATH, "//*[contains(@data-title, '나라장터 공지사항')]")
     time.sleep(1)
 
     if not popup_elements:
@@ -1112,6 +1112,10 @@ file_search_keywords = ["레포팅", "리포트", "리포팅", "Report", "유비
 
 for search_word in search_keywords:
     
+    # 스크롤 맨 위로 이동
+    driver.execute_script("window.scrollTo(0, 0);")
+    logging.info("페이지의 최상단으로 스크롤")
+
     # 사업명 입력
     search_box_click.send_keys(search_word)
     logging.info(f"검색 박스에 {search_word} 입력")
