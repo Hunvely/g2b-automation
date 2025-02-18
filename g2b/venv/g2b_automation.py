@@ -1228,6 +1228,8 @@ for search_word in search_keywords:
                     else:
                         try:
                             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                            logging.info("페이지 맨 밑으로 스크롤")
+
                             # 현재 선택된 페이지 확인
                             current_page = driver.find_element(By.CLASS_NAME, "w2pageList_label_selected")
                             current_page_number = int(current_page.text)
@@ -1364,6 +1366,9 @@ for search_word in search_keywords:
                     # 현재 선택된 페이지 확인
                     current_page = driver.find_element(By.CLASS_NAME, "w2pageList_label_selected")
                     current_page_number = int(current_page.text)
+
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    logging.info("페이지 맨 밑으로 스크롤")
 
                     # 다음 페이지 버튼 찾기
                     next_page_number = current_page_number + 1
