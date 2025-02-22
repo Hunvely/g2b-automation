@@ -106,31 +106,28 @@ def scroll_until_element_visible(driver, max_scrolls=5, scroll_step=300, wait_ti
     logging.warning(f"최대 {max_scrolls}번 스크롤했지만 요소를 찾을 수 없습니다: {id}")
     return False
 
+def wait_for_element(driver, locator, timeout=30):
+    return WebDriverWait(driver, timeout).until(
+        EC.presence_of_element_located(locator)
+    )
 
 # 상세규격정보 페이지 데이터 추출
 def extract_data(driver):
 
     # 각 요소 찾기
-    사전규격등록번호 = driver.find_element(
-        By.CSS_SELECTOR, "input[title^='사전규격등록번호']"
-    )
-    사전규격명 = driver.find_element(By.CSS_SELECTOR, "td[data-title^='사전규격명']")
-    수요기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='수요기관']")
-    공고기관 = driver.find_element(By.CSS_SELECTOR, "input[title^='공고기관']")
-    담당자 = driver.find_element(
-        By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']"
-    )
-    배정예산액 = driver.find_element(
-        By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']"
-    )
-    의견등록마감일시 = driver.find_element(By.CSS_SELECTOR, "input[title^='시분']")
+    사전규격등록번호 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='사전규격등록번호']"))
+    사전규격명 = wait_for_element(driver, (By.CSS_SELECTOR, "td[data-title^='사전규격명']"))
+    수요기관 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='수요기관']"))
+    공고기관 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='공고기관']"))
+    담당자 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='공고기관담당자명(전화번호)']"))
+    배정예산액 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='배정예산액(부가세포함)']"))
+    의견등록마감일시 = wait_for_element(driver, (By.CSS_SELECTOR, "input[title^='시분']"))
 
     # 사전규격 상세정보 필드 확인 및 데이터 추출
     try:
-        상세정보_컨테이너 = driver.find_element(By.ID, "mf_wfm_container_grpUrlInfo")
-        상세정보_링크 = 상세정보_컨테이너.find_element(
-            By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl"
-        )
+        상세정보_컨테이너 = wait_for_element(driver, (By.ID, "mf_wfm_container_grpUrlInfo"))
+        상세정보_링크 = wait_for_element(driver, (By.CSS_SELECTOR, "#mf_wfm_container_ancPbancInstUrl"))
+
         상세정보_텍스트 = 상세정보_컨테이너.text.strip() or "N/A"
         # JavaScript URL 대신 텍스트에서 URL 추출
         if 상세정보_링크.get_attribute("href") == "javascript:void(null);":
@@ -981,7 +978,7 @@ driver.get("https://www.g2b.go.kr")
 logging.info("나라장터 페이지로 이동 완료")
 
 # 나라장터 페이지 로드 완료될 때까지 sleep 주기
-time.sleep(8)
+time.sleep(30)
 
 # 창 최대화
 driver.maximize_window()
@@ -999,7 +996,7 @@ while True:
     for popup in popup_elements:
         try:
             # 팝업 내부에서 title="창닫기" 버튼 찾기
-            close_button = popup.find_element(By.XPATH, ".//*[@title='창닫기']")
+            close_button = driver.find_element(By.XPATH, "//*[@title='오늘 하루 이 창을 열지 않음']")
             close_button.click()  # 버튼 클릭
             print("'나라장터 공지사항' 팝업 닫기 버튼 클릭 완료!")
             time.sleep(1)  # 클릭 후 대기
@@ -1159,7 +1156,7 @@ for search_word in search_keywords:
             link = row.find_element(By.CSS_SELECTOR, "td a")
 
             # 링크가 클릭 가능할 때까지 대기
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(link))
+            WebDriverWait(driver, 60).until(EC.element_to_be_clickable(link))
 
             # 링크 클릭
             link.click()
@@ -1169,7 +1166,7 @@ for search_word in search_keywords:
 
             # 새 페이지 로드 대기
             try:
-                WebDriverWait(driver, 10).until(
+                WebDriverWait(driver, 60).until(
                     EC.presence_of_element_located(
                         (By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle")
                     )
@@ -1210,7 +1207,7 @@ for search_word in search_keywords:
                     time.sleep(1)
 
                     # 페이지가 로드된 후 다시 rows 가져오기
-                    WebDriverWait(driver, 10).until(
+                    WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located(
                             (By.ID, "mf_wfm_container_gridView1_body_tbody")
                         )
@@ -1237,7 +1234,7 @@ for search_word in search_keywords:
                             # 다음 페이지 버튼 찾기
                             next_page_number = current_page_number + 1
                             try:
-                                next_page_button = WebDriverWait(driver, 10).until(
+                                next_page_button = WebDriverWait(driver, 60).until(
                                     EC.element_to_be_clickable((By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")))
                             except:
                                 logging.info("다음 페이지 없음. 모든 검색 완료.")
@@ -1248,7 +1245,7 @@ for search_word in search_keywords:
                             logging.info(f"{next_page_number} 페이지로 이동 중...")
                             time.sleep(2)
 
-                            WebDriverWait(driver, 15).until(
+                            WebDriverWait(driver, 60).until(
                                 EC.presence_of_element_located((By.ID, tbody_id))
                             )
 
@@ -1285,15 +1282,23 @@ for search_word in search_keywords:
                 logging.warning("첨부파일을 찾지 못했습니다.")
 
             # 전체 선택 체크박스 클릭
-            checkbox = WebDriverWait(driver, 15).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']")))
-            checkbox.click()
+            # 체크박스 요소가 로딩될 때까지 대기
+            checkbox = WebDriverWait(driver, 60).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "[id*='_header__column1_checkboxLabel__id']"))
+            )
+
+            # 체크박스가 화면에 보일 때까지 스크롤
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", checkbox)
+            time.sleep(1)  # 스크롤 반영 대기
+
+            # 체크박스 클릭 가능 여부 확인 후 클릭
+            WebDriverWait(driver, 60).until(EC.element_to_be_clickable(checkbox)).click()
             logging.info("모든 첨부파일을 선택")
             time.sleep(2)
 
             # 파일 다운로드
             logging.info("파일 다운로드 시작")
-            download_button = WebDriverWait(driver, 15).until(
+            download_button = WebDriverWait(driver, 60).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "[id*='_btnFileDown']")))
             time.sleep(1)
             download_button.click()
@@ -1348,7 +1353,7 @@ for search_word in search_keywords:
             time.sleep(1)
 
             # 페이지가 로드된 후 다시 rows 가져오기
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.ID, "mf_wfm_container_gridView1_body_tbody"))
             )
             rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
@@ -1373,7 +1378,7 @@ for search_word in search_keywords:
                     # 다음 페이지 버튼 찾기
                     next_page_number = current_page_number + 1
                     try:
-                        next_page_button = WebDriverWait(driver, 10).until(
+                        next_page_button = WebDriverWait(driver, 60).until(
                             EC.element_to_be_clickable((By.ID, f"mf_wfm_container_pagelist_page_{next_page_number}")))
                     except:
                         logging.info("다음 페이지 없음. 모든 검색 완료.")
@@ -1384,7 +1389,7 @@ for search_word in search_keywords:
                     logging.info(f"{next_page_number} 페이지로 이동 중...")
                     time.sleep(2)
 
-                    WebDriverWait(driver, 15).until(
+                    WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located((By.ID, tbody_id))
                     )
 
