@@ -389,7 +389,8 @@ def screenshot_hwp(keyword, 사전규격명):
         pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
         time.sleep(2)
 
-        hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+        hwp_window = app.window(title_re=f".*{사전규격명}.*한글.*") # 한글 프로그램의 창을 찾기
+        logging.info(f"{사전규격명} + 한글 창 찾기")
 
         # 문서의 맨 위로 이동 (Ctrl + Page Up)
         hwp_window.type_keys("^({PGUP})")
@@ -532,7 +533,9 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
 
         # 창이 로드될 때까지 대기
         try:
-            pdf_window = app.window(title_re=".*Adobe Reader.*")  # 최대 30초 대기
+            pdf_window = app.window(title_re=f".*{사전규격명}.*Adobe Reader.*")  # 최대 30초 대기
+            logging.info(f"{사전규격명} + PDF 창 찾기")
+
             pdf_window.wait('visible', timeout=30)  # 30초 내에 창이 나타날 때까지 대기
             print("Adobe Acrobat Reader 창 로드 완료")
         except TimeoutError:
@@ -656,7 +659,9 @@ def screenshot_docx(keyword, 사전규격명):
         # 워드 로딩
         time.sleep(5)
 
-        word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
+        word_window = app.window(title_re=f".*{사전규격명}.*Word.*")  # 워드 프로그램의 창을 찾기
+        logging.info(f"{사전규격명} + Word 창 찾기")
+
 
         # 문서의 맨 위로 이동 (최초 한 번만 실행)
         if not hasattr(screenshot_docx, "moved_to_top"):
@@ -775,7 +780,9 @@ def screenshot_xlsx(keyword, 사전규격명):
         # 엑셀 로딩
         time.sleep(5)
 
-        excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
+        excel_window = app.window(title_re=f".*{사전규격명}.*Excel.*")  # 엑셀 프로그램의 창을 찾기
+        logging.info(f"{사전규격명} + Excel 창 찾기")
+
 
         # 문서의 맨 위로 이동 (Ctrl + Page Up)
         excel_window.type_keys("^({HOME})")
@@ -983,6 +990,8 @@ time.sleep(30)
 # 창 최대화
 driver.maximize_window()
 
+WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+
 # 팝업 찾고 닫기
 while True:
     # data-title="나라장터 공지사항"인 팝업 찾기
@@ -996,8 +1005,8 @@ while True:
     for popup in popup_elements:
         try:
             # 팝업 내부에서 title="창닫기" 버튼 찾기
-            close_button = driver.find_element(By.XPATH, "//*[@title='오늘 하루 이 창을 열지 않음']")
-            close_button.click()  # 버튼 클릭
+            close_button = driver.find_element(By.XPATH, "//*[@aria-label='창닫기']")
+            driver.execute_script("arguments[0].click();", close_button)
             print("'나라장터 공지사항' 팝업 닫기 버튼 클릭 완료!")
             time.sleep(1)  # 클릭 후 대기
         except Exception as e:
@@ -1021,7 +1030,9 @@ time.sleep(5)
 
 # 사전규격공개 옵션 선택
 pre_specification = "#mf_wfm_container_radSrchTy_input_1"
-pre_specification_click = driver.find_element(By.CSS_SELECTOR, pre_specification)
+pre_specification_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, pre_specification))
+)
 pre_specification_click.click()
 logging.info("검색 유형 사전규격공개 옵션 선택")
 time.sleep(2)
@@ -1045,7 +1056,9 @@ else:
 
 # 진행일자 시작일 input박스 클릭
 start_date_xpath = "//input[@type='text' and contains(@id, 'ibxStrDay')]"
-start_date_click = driver.find_element(By.XPATH, start_date_xpath)
+start_date_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.XPATH, start_date_xpath))
+)
 start_date_click.click()
 time.sleep(1)
 
@@ -1061,7 +1074,9 @@ time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
 end_date_xpath = "//input[@type='text' and contains(@id, 'ibxEndDay')]"
-end_date_click = driver.find_element(By.XPATH, end_date_xpath)
+end_date_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.XPATH, end_date_xpath))
+)
 end_date_click.click()
 time.sleep(1)
 
@@ -1077,27 +1092,35 @@ time.sleep(1)
 
 # 상세 조건 펼치기
 detail = "[id$='_btnSearchToggle']"
-detail_click = driver.find_element(By.CSS_SELECTOR, detail)
+detail_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, detail))
+)
 detail_click.click()
 logging.info("상세 조건 펼치기 완료")
 
 # 업무구분 일반용역 클릭
 work1 = "#mf_wfm_container_chkRqdcBsneSeCd_input_2"
-work1_click = driver.find_element(By.CSS_SELECTOR, work1)
+work1_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, work1))
+)
 work1_click.click()
 logging.info("업무구분 일반용역 선택")
 time.sleep(1)
 
 # 업무구분 기술영역 클릭
 work2 = "#mf_wfm_container_chkRqdcBsneSeCd_input_3"
-work2_click = driver.find_element(By.CSS_SELECTOR, work2)
+work2_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, work2))
+)
 work2_click.click()
 logging.info("업무구분 기술영역 선택")
 time.sleep(1)
 
 # 사업명 입력 박스 클릭
 search_box = "#mf_wfm_container_txtBizNm"
-search_box_click = driver.find_element(By.CSS_SELECTOR, search_box)
+search_box_click = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, search_box))
+)
 search_box_click.click()
 time.sleep(1)
 
@@ -1120,15 +1143,21 @@ for search_word in search_keywords:
 
     # 검색 버튼 클릭
     search_button = "#mf_wfm_container_btnS0001"
-    search_button_click = driver.find_element(By.CSS_SELECTOR, search_button)
+    search_button_click = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, search_button))
+    )
     search_button_click.click()
     logging.info(f"{search_word} 검색 시작")
-    time.sleep(1)
+    time.sleep(3)
+
+    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
 
     # 리스트에 항목 있는지 확인 (display none을 확인)
     tbody_id = "mf_wfm_container_gridView1_body_tbody"
     time.sleep(1)
-    rows = driver.find_elements(By.XPATH, f"//*[@id='{tbody_id}']/tr")
+    rows = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.XPATH, f"//*[@id='{tbody_id}']/tr"))
+    )
     time.sleep(1)
 
     # 검색 결과가 없으면 다음 키워드로 계속
@@ -1152,6 +1181,9 @@ for search_word in search_keywords:
                     f"'{search_word}'의 검색 결과 리스트 탐색을 완료했습니다. 다음 키워드로 넘어갑니다."
                 )
                 break  # 해당 키워드로 검색을 종료하고, 다음 키워드로 넘어감
+
+            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+
             # 각 row에서 링크를 찾기
             link = row.find_element(By.CSS_SELECTOR, "td a")
 
@@ -1166,6 +1198,9 @@ for search_word in search_keywords:
 
             # 새 페이지 로드 대기
             try:
+                WebDriverWait(driver, 120).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']"))
+                )
                 WebDriverWait(driver, 60).until(
                     EC.presence_of_element_located(
                         (By.CSS_SELECTOR, "#mf_wfm_cntsHeader_spnHeaderTitle")
@@ -1207,6 +1242,8 @@ for search_word in search_keywords:
                     time.sleep(1)
 
                     # 페이지가 로드된 후 다시 rows 가져오기
+                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+
                     WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located(
                             (By.ID, "mf_wfm_container_gridView1_body_tbody")
@@ -1352,6 +1389,8 @@ for search_word in search_keywords:
             logging.info("파일 처리 완료 후, 이전 페이지로 돌아가기")
             time.sleep(1)
 
+            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+
             # 페이지가 로드된 후 다시 rows 가져오기
             WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.ID, "mf_wfm_container_gridView1_body_tbody"))
@@ -1388,6 +1427,8 @@ for search_word in search_keywords:
                     next_page_button.click()
                     logging.info(f"{next_page_number} 페이지로 이동 중...")
                     time.sleep(2)
+
+                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
 
                     WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located((By.ID, tbody_id))
