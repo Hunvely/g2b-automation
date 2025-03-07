@@ -990,7 +990,7 @@ time.sleep(30)
 # 창 최대화
 driver.maximize_window()
 
-WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
 # 팝업 찾고 닫기
 while True:
@@ -1150,7 +1150,7 @@ for search_word in search_keywords:
     logging.info(f"{search_word} 검색 시작")
     time.sleep(3)
 
-    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
     # 리스트에 항목 있는지 확인 (display none을 확인)
     tbody_id = "mf_wfm_container_gridView1_body_tbody"
@@ -1182,7 +1182,7 @@ for search_word in search_keywords:
                 )
                 break  # 해당 키워드로 검색을 종료하고, 다음 키워드로 넘어감
 
-            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
             # 각 row에서 링크를 찾기
             link = row.find_element(By.CSS_SELECTOR, "td a")
@@ -1199,7 +1199,7 @@ for search_word in search_keywords:
             # 새 페이지 로드 대기
             try:
                 WebDriverWait(driver, 120).until(
-                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']"))
+                    EC.invisibility_of_element_located((By.ID, "___processbar2"))
                 )
                 WebDriverWait(driver, 60).until(
                     EC.presence_of_element_located(
@@ -1242,7 +1242,7 @@ for search_word in search_keywords:
                     time.sleep(1)
 
                     # 페이지가 로드된 후 다시 rows 가져오기
-                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
                     WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located(
@@ -1389,7 +1389,7 @@ for search_word in search_keywords:
             logging.info("파일 처리 완료 후, 이전 페이지로 돌아가기")
             time.sleep(1)
 
-            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
             # 페이지가 로드된 후 다시 rows 가져오기
             WebDriverWait(driver, 60).until(
@@ -1428,7 +1428,7 @@ for search_word in search_keywords:
                     logging.info(f"{next_page_number} 페이지로 이동 중...")
                     time.sleep(2)
 
-                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "img[src*='loading.svg']")))
+                    WebDriverWait(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
                     WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located((By.ID, tbody_id))
