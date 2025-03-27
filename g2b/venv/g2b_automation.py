@@ -379,7 +379,7 @@ def screenshot_hwp(keyword, 사전규격명):
         app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
 
         # 한글 로딩
-        time.sleep(5)
+        time.sleep(7)
 
         # 경고 창 닫기
         # if close_warning_window_hangle(app):
@@ -387,10 +387,10 @@ def screenshot_hwp(keyword, 사전규격명):
         #     time.sleep(2)
 
         pyautogui.press("esc")  # ESC 키를 눌러 창 닫기
-        time.sleep(2)
+        time.sleep(3)
 
-        hwp_window = app.window(title_re=f".*{사전규격명}.*한글.*") # 한글 프로그램의 창을 찾기
-        logging.info(f"{사전규격명} + 한글 창 찾기")
+        hwp_window = app.window(title_re=".*한글.*")  # 한글 프로그램의 창을 찾기
+        # logging.info(f"{사전규격명} + 한글 창 찾기")
 
         # 문서의 맨 위로 이동 (Ctrl + Page Up)
         hwp_window.type_keys("^({PGUP})")
@@ -459,6 +459,8 @@ def screenshot_hwp(keyword, 사전규격명):
                 )
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                
 
                 # 다음 검색 결과로 이동
                 hwp_edit.type_keys("{ENTER}")  # 다음 검색 결과
@@ -533,8 +535,8 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
 
         # 창이 로드될 때까지 대기
         try:
-            pdf_window = app.window(title_re=f".*{사전규격명}.*Adobe Reader.*")  # 최대 30초 대기
-            logging.info(f"{사전규격명} + PDF 창 찾기")
+            pdf_window = app.window(title_re=".*Adobe Reader.*")  # 최대 30초 대기
+            # logging.info(f"{사전규격명} + PDF 창 찾기")
 
             pdf_window.wait('visible', timeout=30)  # 30초 내에 창이 나타날 때까지 대기
             print("Adobe Acrobat Reader 창 로드 완료")
@@ -598,6 +600,11 @@ def screenshot_pdf(keyword, 사전규격명, first_wait):
                 screenshot.save(screenshot_file)
                 print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
 
+                # 50번 이상 캡처한 경우 다음 키워드로 넘어가기
+                if capture_count >= 50:
+                    print(f"'{keyword}'에 대한 캡처가 50번 이상 진행되어 오류로 판단한 후, 다음 키워드로 넘어갑니다.")
+                    return True  # 50번 이상 캡처한 경우 다음 키워드로 이동
+
                 # 다음 검색 결과로 이동
                 pdf_window.type_keys("{ENTER}")  # 다음 검색 결과
                 time.sleep(2)  # 다음 결과가 로드되도록 대기
@@ -659,8 +666,8 @@ def screenshot_docx(keyword, 사전규격명):
         # 워드 로딩
         time.sleep(5)
 
-        word_window = app.window(title_re=f".*{사전규격명}.*Word.*")  # 워드 프로그램의 창을 찾기
-        logging.info(f"{사전규격명} + Word 창 찾기")
+        word_window = app.window(title_re=".*Word.*")  # 워드 프로그램의 창을 찾기
+        # logging.info(f"{사전규격명} + Word 창 찾기")
 
 
         # 문서의 맨 위로 이동 (최초 한 번만 실행)
@@ -767,32 +774,37 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
 
     open_file(file_path)
 
-    for keyword in keywords:  # 순차적으로 각 키워드 처리
-        # 키워드 검색 후 스크린샷 찍기
-        screenshot_xlsx(keyword, 사전규격명)
+    app = pywinauto.Application().connect(path=excel_path)  # 엑셀 프로그램 경로
+
+    # 엑셀 로딩
+    time.sleep(20)
+
+    excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
+
+    excel = win32com.client.Dispatch("Excel.Application")
+    workbook = excel.ActiveWorkbook  # 현재 활성화된 워크북
+
+    for sheet in workbook.Sheets:
+        if sheet.Visible != 0:  # 숨겨져 있지 않은 시트만 검색
+            logging.info(f"***** 시트 이동: {sheet.Name} *****")
+            sheet.Activate()  # 해당 시트로 이동
+            time.sleep(1)  # 시트 변경 후 대기
+
+            for keyword in keywords:  # 순차적으로 각 키워드 처리
+                # 키워드 검색 후 스크린샷 찍기
+                screenshot_xlsx(keyword, 사전규격명, app, excel_window)
 
     close_excel_file()
 
-def screenshot_xlsx(keyword, 사전규격명):
+def screenshot_xlsx(keyword, 사전규격명, app, excel_window):
     try:
-        app = pywinauto.Application().connect(path=excel_path)  # 엑셀 프로그램 경로
-
-        # 엑셀 로딩
-        time.sleep(5)
-
-        excel_window = app.window(title_re=f".*{사전규격명}.*Excel.*")  # 엑셀 프로그램의 창을 찾기
-        logging.info(f"{사전규격명} + Excel 창 찾기")
-
-
-        # 문서의 맨 위로 이동 (Ctrl + Page Up)
+        
+        # 문서의 맨 위로 이동 (Ctrl + HOME)
         excel_window.type_keys("^({HOME})")
         logging.info("문서 맨 위로 이동")
         time.sleep(1)
 
-        # 모든 컨트롤 요소들 출력 (child_window)
-        # excel_window.print_control_identifiers()
-
-        # 키워드 검색 (단, 한글 프로그램에서 키워드 검색 기능을 자동화하려면 단축키 활용)
+        # 키워드 검색
         excel_window.type_keys("^f")  # Ctrl+F (검색 단축키)
         logging.info("검색 모달 표시")
         time.sleep(2)
@@ -1028,6 +1040,8 @@ ordering_list_click.click()
 logging.info("발주목록 소메뉴 클릭")
 time.sleep(5)
 
+WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
+
 # 사전규격공개 옵션 선택
 pre_specification = "#mf_wfm_container_radSrchTy_input_1"
 pre_specification_click = WebDriverWait(driver, 10).until(
@@ -1069,7 +1083,7 @@ time.sleep(1)
 
 # 진행일자 시작일 입력
 start_date_click.send_keys(start_date)
-logging.info(f"시작일 {start_date} 입력 완료")
+logging.info(f"시작일 {'start_date'} 입력 완료")
 time.sleep(1)
 
 # 진행일자 종료일 input박스 클릭
@@ -1282,6 +1296,8 @@ for search_word in search_keywords:
                             logging.info(f"{next_page_number} 페이지로 이동 중...")
                             time.sleep(2)
 
+                            WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
+
                             WebDriverWait(driver, 60).until(
                                 EC.presence_of_element_located((By.ID, tbody_id))
                             )
@@ -1428,7 +1444,7 @@ for search_word in search_keywords:
                     logging.info(f"{next_page_number} 페이지로 이동 중...")
                     time.sleep(2)
 
-                    WebDriverWait(EC.invisibility_of_element_located((By.ID, "___processbar2")))
+                    WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.ID, "___processbar2")))
 
                     WebDriverWait(driver, 60).until(
                         EC.presence_of_element_located((By.ID, tbody_id))
@@ -1445,7 +1461,7 @@ for search_word in search_keywords:
             logging.warning("Stale element encountered. 현재 row를 건너뜁니다.")
             current_index += 1  # Stale element가 발생하면 건너뛰고 계속 진행
         except Exception as e:
-            logging.error(f"예상치 못한 오류 발생: {e}")
+            logging.error(f"예상치 못한 오류 발생: {str(e)}")
             current_index += (
                 1  # 오류가 발생하면 해당 항목을 건너뛰고 다음 항목으로 넘어감
             )
