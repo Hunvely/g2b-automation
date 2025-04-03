@@ -868,12 +868,12 @@ def screenshot_xlsx(keyword, 사전규격명, app, excel_window):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
 
                 # 스크린샷 영역 설정
-                x1, y1 = 100, 200  # 좌측 상단 좌표
-                width, height = 1800, 800
-                x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+                # x1, y1 = 100, 200  # 좌측 상단 좌표
+                # width, height = 1800, 800
+                # x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
 
                 # 스크린샷 찍기
-                screenshot = pyautogui.screenshot(region=(x1, y1, width, height))
+                screenshot = pyautogui.screenshot()
                 capture_count += 1
                 screenshot_file = os.path.join(
                     screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
