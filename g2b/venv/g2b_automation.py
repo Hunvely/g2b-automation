@@ -379,7 +379,7 @@ def screenshot_hwp(keyword, 사전규격명):
         app = pywinauto.Application().connect(path=hanword_path) # 한글 프로그램 경로
 
         # 한글 로딩
-        time.sleep(7)
+        time.sleep(10)
 
         # 경고 창 닫기
         # if close_warning_window_hangle(app):
@@ -778,6 +778,17 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
 
     # 엑셀 로딩
     time.sleep(20)
+
+    # 팝업창이 떠 있다면 ESC로 닫기
+    try:
+        popup = app.window(title_re="Microsoft Excel")
+        if popup.exists(timeout=10):  # 10초 이내에 팝업이 감지되면
+            print("Microsoft Excel 팝업 감지됨. ESC 눌러서 닫기.")
+            popup.set_focus()
+            pyautogui.press("esc")
+            time.sleep(1)
+    except Exception as e:
+        print(f"팝업 감지 중 오류 발생: {e}")
 
     excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
