@@ -14,18 +14,27 @@ from datetime import datetime, timedelta
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 import os
+import site
+import pythoncom
 import re
 import zipfile
 import chromedriver_autoinstaller
 import pyautogui
 import pywinauto
 import win32com.client
+import win32gui
+import win32con
 import pandas as pd
 from openpyxl import load_workbook
 import pyperclip
 from pywinauto.keyboard import send_keys
 import shutil
 
+pythoncom.CoInitialize()
+# pywin32 수동 초기화 (exe 실행 시 누락 방지)
+pywin32_path = os.path.join(site.getsitepackages()[0], 'pywin32_system32')
+if os.path.isdir(pywin32_path):
+    os.environ['PATH'] += os.pathsep + pywin32_path
 
 # 로깅 설정
 logging.basicConfig(
@@ -754,15 +763,25 @@ def screenshot_docx(keyword, 사전규격명):
 
 # ============================================== 엑셀 함수 ==============================================
 
+# 창 맨 앞으로 가져오기
+def bring_window_to_front(window_title_keyword):
+    def enum_handler(hwnd, _):
+        if win32gui.IsWindowVisible(hwnd):
+            window_title = win32gui.GetWindowText(hwnd)
+            if window_title_keyword.lower() in window_title.lower():
+                win32gui.SetForegroundWindow(hwnd)
+    win32gui.EnumWindows(enum_handler, None)
+
 # 엑셀 파일 닫는 함수
-def close_excel_file():
-    # Word 프로세스 종료
-    for proc in psutil.process_iter(["pid", "name"]):
-        if "EXCEL.EXE" in proc.info["name"]:  # Word 프로세스 이름 확인
-            os.kill(proc.info["pid"], 9)  # 프로세스 강제 종료
-            print("Microsoft Excel 종료되었습니다.")
-            return
-    print("Microsoft Excel가 실행 중이 아닙니다.")
+def close_excel_file(excel, workbook):
+    try:
+        excel.DisplayAlerts = False
+        if workbook:
+            workbook.Close(SaveChanges=False) # 저장 안 하고 닫기
+        excel.Quit()
+        print("엑셀 정상 종료 완료")
+    except Exception as e:
+        print(f"엑셀 닫기 중 오류 발생: {e}")
 
 
 # 다운로드된 엑셀 파일을 열고, 키워드를 검색하여 스크린샷을 찍는 함수 호출
@@ -772,9 +791,34 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
         print(f"파일을 찾을 수 없습니다: {file_path}")
         return
 
-    open_file(file_path)
+    # 엑셀 인스턴스 시작
+    try:
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = True
+    except Exception as e:
+        print(f"엑셀 실행 실패: {e}")
+        return
+    
+    try:
+        workbook = excel.Workbooks.Open(file_path)  # 명시적으로 파일 열기
+        if not workbook:
+            print("워크북 열기 실패")
+            excel.Quit()
+            return
+    except Exception as e:
+        print(f"엑셀 파일 열기 실패: {e}")
+        excel.Quit()
+        return
+    
+    bring_window_to_front("Excel")  # 엑셀 창 앞으로
+    time.sleep(5)
 
-    app = pywinauto.Application().connect(path=excel_path)  # 엑셀 프로그램 경로
+    # pywinauto로 앱 연결
+    try:
+        app = pywinauto.Application().connect(path=excel_path)
+    except Exception as e:
+        print(f"pywinauto 연결 실패: {e}")
+        return
 
     # 엑셀 로딩
     time.sleep(20)
@@ -793,19 +837,31 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
     excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
     excel = win32com.client.Dispatch("Excel.Application")
-    workbook = excel.ActiveWorkbook  # 현재 활성화된 워크북
+    try:
+        workbook = excel.ActiveWorkbook
+        if not workbook:
+            print("활성 워크북이 없습니다.")
+            close_excel_file(excel, None)
+            return
+    except Exception as e:
+        print(f"활성 워크북 접근 실패: {e}")
+        close_excel_file(excel, None)
+        return
 
-    for sheet in workbook.Sheets:
-        if sheet.Visible != 0:  # 숨겨져 있지 않은 시트만 검색
-            logging.info(f"***** 시트 이동: {sheet.Name} *****")
-            sheet.Activate()  # 해당 시트로 이동
-            time.sleep(1)  # 시트 변경 후 대기
+    try:
+        for sheet in workbook.Sheets:
+            if sheet.Visible != 0:  # 숨겨져 있지 않은 시트만 검색
+                logging.info(f"***** 시트 이동: {sheet.Name} *****")
+                sheet.Activate()  # 해당 시트로 이동
+                time.sleep(1)  # 시트 변경 후 대기
 
-            for keyword in keywords:  # 순차적으로 각 키워드 처리
-                # 키워드 검색 후 스크린샷 찍기
-                screenshot_xlsx(keyword, 사전규격명, app, excel_window)
+                for keyword in keywords:  # 순차적으로 각 키워드 처리
+                    # 키워드 검색 후 스크린샷 찍기
+                    screenshot_xlsx(keyword, 사전규격명, app, excel_window)
+    except Exception as e:
+        print(f"시트 순회 중 오류: {e}")
 
-    close_excel_file()
+    close_excel_file(excel, workbook)
 
 def screenshot_xlsx(keyword, 사전규격명, app, excel_window):
     try:
@@ -824,7 +880,7 @@ def screenshot_xlsx(keyword, 사전규격명, app, excel_window):
         excel_edit = app.window(title_re=".*찾기.*")
         # word_edit.print_control_identifiers()
 
-        if not excel_edit:
+        if not excel_edit.exists():
             print("엑셀 편집창을 찾을 수 없습니다.")
             return
         
@@ -846,60 +902,62 @@ def screenshot_xlsx(keyword, 사전규격명, app, excel_window):
         search_texts = set()  # 검색 결과 중복 감지를 위한 저장 공간
 
         while True:
-
-            # excel_edit_complete 창 확인 (모든 검색 완료 후 종료)
-            excel_edit_complete = app.window(title_re="Microsoft Excel")
-            if excel_edit_complete.exists():
-                print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
-                pyautogui.press("enter")  # ENTER 키를 눌러 다이얼로그 닫기
-                time.sleep(1)
-                pyautogui.press("esc")  # ESC 키를 눌러 검색창 닫기
-                return True  # 모든 검색 종료
-
-            # 검색된 셀의 내용 가져오기 (Ctrl + C)
-            excel_window.set_focus()
-            excel_window.type_keys("^c")  # 복사 (Ctrl + C)
-            time.sleep(0.5)
-
-            # 클립보드에서 값 읽기
-            copied_text = pyperclip.paste().strip()
-            copied_text = " ".join(copied_text.split())  # 줄바꿈/여러 공백 제거
-            logging.info(f"검색된 텍스트: {copied_text}")
-
-            if copied_text in search_texts:
-                print(f"'{keyword}' 검색 종료 (중복 감지)")
-                time.sleep(1)
-                excel_edit.type_keys("{ESC}")  # ESC 키를 눌러 검색창 닫기
-                break
-
-            search_texts.add(copied_text)  # 새로운 검색 결과 저장
-
             try:
-                # 중복된 파일명 방지하기 위해 타임스태프 설정
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
+                # excel_edit_complete 창 확인 (모든 검색 완료 후 종료)
+                excel_edit_complete = app.window(title_re="Microsoft Excel")
+                if excel_edit_complete.exists():
+                    print(f"'{keyword}'에 대한 모든 검색을 마쳤습니다.")
+                    pyautogui.press("enter")  # ENTER 키를 눌러 다이얼로그 닫기
+                    time.sleep(1)
+                    pyautogui.press("esc")  # ESC 키를 눌러 검색창 닫기
+                    return True  # 모든 검색 종료
 
-                # 스크린샷 영역 설정
-                # x1, y1 = 100, 200  # 좌측 상단 좌표
-                # width, height = 1800, 800
-                # x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+                # 검색된 셀의 내용 가져오기 (Ctrl + C)
+                excel_window.set_focus()
+                excel_window.type_keys("^c")  # 복사 (Ctrl + C)
+                time.sleep(0.5)
 
-                # 스크린샷 찍기
-                screenshot = pyautogui.screenshot()
-                capture_count += 1
-                screenshot_file = os.path.join(
-                    screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
-                )
-                screenshot.save(screenshot_file)
-                print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+                # 클립보드에서 값 읽기
+                copied_text = pyperclip.paste().strip()
+                copied_text = " ".join(copied_text.split())  # 줄바꿈/여러 공백 제거
+                logging.info(f"검색된 텍스트: {copied_text}")
 
-                # 다음 검색 결과로 이동
-                excel_edit.type_keys("{ENTER}")  # 다음 검색 결과
-                time.sleep(2)  # 다음 결과가 로드되도록 대기
+                if copied_text in search_texts:
+                    print(f"'{keyword}' 검색 종료 (중복 감지)")
+                    time.sleep(1)
+                    excel_edit.type_keys("{ESC}")  # ESC 키를 눌러 검색창 닫기
+                    break
 
+                search_texts.add(copied_text)  # 새로운 검색 결과 저장
+
+                try:
+                    # 중복된 파일명 방지하기 위해 타임스태프 설정
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # YYYYMMDD_HHMMSS 형식
+
+                    # 스크린샷 영역 설정
+                    # x1, y1 = 100, 200  # 좌측 상단 좌표
+                    # width, height = 1800, 800
+                    # x2, y2 = x1 + width, y1 + height  # 우측 하단 좌표 계산
+
+                    # 스크린샷 찍기
+                    screenshot = pyautogui.screenshot()
+                    capture_count += 1
+                    screenshot_file = os.path.join(
+                        screenshot_dir, f"{사전규격명}_{keyword}_{capture_count}_{timestamp}.png"
+                    )
+                    screenshot.save(screenshot_file)
+                    print(f"검색 결과 {capture_count} 캡처 완료: {screenshot_file}")
+
+                    # 다음 검색 결과로 이동
+                    excel_edit.type_keys("{ENTER}")  # 다음 검색 결과
+                    time.sleep(2)  # 다음 결과가 로드되도록 대기
+
+                except Exception as e:
+                    print(f"검색 결과 끝 또는 오류: {e}")
+                    break
             except Exception as e:
-                print(f"검색 결과 끝 또는 오류: {e}")
+                print(f"검색 루프 중 오류 또는 종료: {e}")
                 break
-
         print(f"총 {capture_count}개의 검색 결과 캡처 완료.")
 
     except Exception as e:
