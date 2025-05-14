@@ -836,7 +836,6 @@ def handle_xlsx_file(file_path, keywords, 사전규격명):
 
     excel_window = app.window(title_re=".*Excel.*")  # 엑셀 프로그램의 창을 찾기
 
-    excel = win32com.client.Dispatch("Excel.Application")
     try:
         workbook = excel.ActiveWorkbook
         if not workbook:
